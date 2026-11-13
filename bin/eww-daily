@@ -1,0 +1,285 @@
+#!/usr/bin/env -S uv run --quiet --script
+# eww: capture | Add three passages from your collections to today's day-note.
+# /// script
+# requires-python = ">=3.10"
+# dependencies = []
+# ///
+"""eww daily [--dry-run]
+
+Add a "## Resurfaced" section to today's day-note, holding three passages
+from the vault's collections/ folder. Each passage is a link plus a short
+excerpt of your own text. No LLM is used, and no state is kept outside the
+vault.
+
+A note is left out when it:
+  is tagged #no-resurface
+  is tagged #llm-generated
+  sits in collections/ttrpg or collections/game
+  was shown in the last 60 days (read from past day-notes)
+
+Running it again on the same day changes nothing.
+
+  --dry-run   print the section without writing it
+"""
+from __future__ import annotations
+
+import datetime
+import os
+import random
+import re
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+SECTION_HEADING = "## Resurfaced"
+SKIPPED_KINDS = frozenset({"ttrpg", "game"})
+PASSAGES_PER_DAY = 3
+RECENT_DAYS = 60
+EXCERPT_LIMIT = 300
+SHORTEST_PASSAGE = 40
+
+FRONT_MATTER = re.compile(r"\A---\n.*?\n---\n", re.S)
+TRAILING_SOURCE_LINK = re.compile(r"\s*\(\[[^\]]*\]\([^)]*\)\)\s*$")
+DAY_NOTE_NAME = re.compile(r"^(\d{4})-(\d{2})-(\d{2})$")
+LINK_TARGET = re.compile(r"\[\[([^\]|]+)")
+
+
+@dataclass(frozen=True)
+class Passage:
+    """One excerpt chosen from one note."""
+
+    link: str  # path inside the vault, with no .md ending
+    title: str
+    kind: str  # the folder under collections/, for example "book"
+    excerpt: str
+
+
+def vault_path(home: Path) -> Path | None:
+    """The vault named in ~/.config/eww/vault, or None when the file is absent."""
+    pointer = home / ".config" / "eww" / "vault"
+    if not pointer.is_file():
+        return None
+    first_line = pointer.read_text().splitlines()[0].strip()
+    if first_line.startswith("~/"):
+        return home / first_line[2:]
+    return Path(first_line)
+
+
+def is_excluded(text: str) -> bool:
+    """True for a note the owner or an AI marked as not for resurfacing."""
+    return "#no-resurface" in text or "#llm-generated" in text or bool(
+        re.search(r"^\s*-\s*(no-resurface|llm-generated)\s*$", text, re.M)
+    )
+
+
+def shorten(text: str, limit: int = EXCERPT_LIMIT) -> str:
+    """Collapse whitespace and cut at a word boundary, marking the cut with an ellipsis."""
+    text = " ".join(text.split())
+    if len(text) <= limit:
+        return text
+    return text[:limit].rsplit(" ", 1)[0].rstrip(" ,;:") + "…"
+
+
+def _usable(text: str) -> bool:
+    return len(text) >= SHORTEST_PASSAGE and "![" not in text
+
+
+def highlight_passages(body: str) -> list[str]:
+    """Each bullet or plain paragraph under a "## Highlights" heading."""
+    if "## Highlights" not in body:
+        return []
+    section = re.split(r"^## ", body.split("## Highlights", 1)[1], maxsplit=1, flags=re.M)[0]
+    passages: list[str] = []
+    current: list[str] = []
+
+    def close() -> None:
+        if current:
+            passages.append(TRAILING_SOURCE_LINK.sub("", " ".join(current)))
+            current.clear()
+
+    for line in section.splitlines():
+        if line.startswith("- "):
+            close()
+            current.append(line[2:])
+        elif not line.strip() or line.startswith("#"):
+            close()
+        elif line[0] in " \t" and current:
+            # An indented line continues the bullet above it, unless it is a nested bullet.
+            if line.strip().startswith("- "):
+                continue
+            current.append(line.strip())
+        else:
+            close()
+            current.append(line.strip())
+    close()
+    return [passage for passage in passages if _usable(passage)]
+
+
+def quote_passages(body: str) -> list[str]:
+    """Each block of consecutive lines that start with ">"."""
+    passages: list[str] = []
+    current: list[str] = []
+    for line in body.splitlines() + [""]:
+        if line.startswith(">"):
+            current.append(line.lstrip("> ").strip())
+        elif current:
+            passages.append(" ".join(part for part in current if part))
+            current = []
+    return [passage for passage in passages if _usable(passage)]
+
+
+def first_paragraph(body: str) -> list[str]:
+    """The first plain paragraph: not a heading, list item, table, tag line, or embed."""
+    for block in re.split(r"\n\s*\n", body):
+        lines = [line.strip() for line in block.splitlines() if line.strip()]
+        if not lines or any(line[0] in "#-*|>!" or re.match(r"\d+\. ", line) for line in lines):
+            continue
+        paragraph = " ".join(lines)
+        if _usable(paragraph):
+            return [paragraph]
+    return []
+
+
+def passages_in(text: str) -> list[str]:
+    """Every passage a note offers: highlights first, else quotes, else its first paragraph."""
+    body = FRONT_MATTER.sub("", text, count=1)
+    return highlight_passages(body) or quote_passages(body) or first_paragraph(body)
+
+
+def display_title(stem: str) -> str:
+    """A note's file name as a title. A "-2" style ending from a name clash is dropped."""
+    title = re.sub(r"-\d+$", "", stem)
+    return title.replace("|", "-").replace("[", "(").replace("]", ")")
+
+
+def candidates(vault: Path) -> dict[str, tuple[str, str, list[str]]]:
+    """Every note that may be shown, keyed by link: (title, kind, passages)."""
+    found: dict[str, tuple[str, str, list[str]]] = {}
+    collections = vault / "collections"
+    for path in sorted(collections.rglob("*.md")):
+        relative = path.relative_to(vault)
+        kind = relative.parts[1] if len(relative.parts) > 2 else ""
+        if not kind or kind in SKIPPED_KINDS:
+            continue
+        text = path.read_text(errors="ignore")
+        if is_excluded(text):
+            continue
+        passages = passages_in(text)
+        if passages:
+            found[relative.with_suffix("").as_posix()] = (display_title(path.stem), kind, passages)
+    return found
+
+
+def recently_shown(vault: Path, today: datetime.date, days: int = RECENT_DAYS) -> set[str]:
+    """Links listed under "## Resurfaced" in day-notes from the last `days` days."""
+    shown: set[str] = set()
+    for path in (vault / "journal").rglob("*.md"):
+        match = DAY_NOTE_NAME.match(path.stem)
+        if not match:
+            continue
+        try:
+            date = datetime.date(*(int(part) for part in match.groups()))
+        except ValueError:
+            continue
+        if not 0 <= (today - date).days <= days:
+            continue
+        text = path.read_text(errors="ignore")
+        if SECTION_HEADING not in text:
+            continue
+        section = re.split(r"^## ", text.split(SECTION_HEADING, 1)[1], maxsplit=1, flags=re.M)[0]
+        shown.update(LINK_TARGET.findall(section))
+    return shown
+
+
+def pick(
+    notes: dict[str, tuple[str, str, list[str]]],
+    shown: set[str],
+    rng: random.Random,
+    count: int = PASSAGES_PER_DAY,
+) -> list[Passage]:
+    """Choose `count` passages from different notes, and from different kinds while possible.
+
+    Notes not shown recently are used first. When they run out, recently shown notes fill the rest.
+    """
+    chosen: list[str] = []
+    for pool in ([link for link in notes if link not in shown], [link for link in notes if link in shown]):
+        used_kinds = {notes[link][1] for link in chosen}
+        while len(chosen) < count:
+            remaining = [link for link in pool if link not in chosen]
+            fresh_kind = [link for link in remaining if notes[link][1] not in used_kinds]
+            options = fresh_kind or remaining
+            if not options:
+                break
+            link = rng.choice(options)
+            chosen.append(link)
+            used_kinds.add(notes[link][1])
+    return [
+        Passage(link=link, title=notes[link][0], kind=notes[link][1], excerpt=shorten(rng.choice(notes[link][2])))
+        for link in chosen
+    ]
+
+
+def render_section(passages: list[Passage]) -> str:
+    """The Markdown section for a day-note."""
+    lines = [SECTION_HEADING, ""]
+    for passage in passages:
+        lines.append(f"- [[{passage.link}|{passage.title}]] ({passage.kind})")
+        lines.append(f"  > {passage.excerpt}")
+    return "\n".join(lines) + "\n"
+
+
+def day_note_path(vault: Path, today: datetime.date) -> Path:
+    return vault / "journal" / f"{today:%Y}" / f"{today:%Y-%m-%d}.md"
+
+
+def append_section(note: Path, section: str) -> bool:
+    """Append the section to the day-note, creating it if needed. False when it is already there."""
+    existing = note.read_text() if note.is_file() else ""
+    if re.search(rf"^{re.escape(SECTION_HEADING)}\s*$", existing, re.M):
+        return False
+    note.parent.mkdir(parents=True, exist_ok=True)
+    separator = "" if not existing else ("\n" if existing.endswith("\n") else "\n\n")
+    # Appending keeps every existing line of the note as it is.
+    with note.open("a") as handle:
+        handle.write(separator + section)
+    return True
+
+
+def main(argv: list[str]) -> int:
+    if argv and argv[0] in ("-h", "--help"):
+        print(__doc__.strip())
+        return 0
+    if any(argument != "--dry-run" for argument in argv):
+        print(f'✗ eww daily: unknown option "{argv[0]}"', file=sys.stderr)
+        return 2
+    dry_run = "--dry-run" in argv
+
+    vault = vault_path(Path(os.environ.get("EWW_HOME") or Path.home()))
+    if vault is None:
+        print("✗ eww daily: no vault on this machine: ~/.config/eww/vault is missing", file=sys.stderr)
+        return 1
+    if not (vault / "collections").is_dir():
+        print(f"✗ eww daily: no collections folder in {vault}", file=sys.stderr)
+        return 1
+
+    today = datetime.date.today()
+    note = day_note_path(vault, today)
+    if not dry_run and note.is_file() and re.search(rf"^{re.escape(SECTION_HEADING)}\s*$", note.read_text(), re.M):
+        print(f"✓ today's day-note already has a {SECTION_HEADING[3:]} section")
+        return 0
+
+    passages = pick(candidates(vault), recently_shown(vault, today), random.Random())
+    if not passages:
+        print("! eww daily: no passage to show. Every collection note is excluded or empty.", file=sys.stderr)
+        return 1
+    section = render_section(passages)
+    if dry_run:
+        print(section, end="")
+        return 0
+    append_section(note, section)
+    print(f"✓ added {len(passages)} passages to journal/{today:%Y}/{today:%Y-%m-%d}.md")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

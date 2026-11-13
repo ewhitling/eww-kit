@@ -18,16 +18,16 @@ Decisions behind this list are in `ADR.md`.
 - **Hood plugin for Obsidian.** Kept in `obsidian/plugins/hood/`. `eww install` copies it into the vault on machines that name one.
 - **Obsidian starting settings.** `make obsidian-snapshot` copies the vault's settings into `obsidian/defaults/`. `eww install` copies them, and the Atom theme, into a vault only where a file is missing.
 
-Tested with `make test` (127 checks in a temporary home folder, with herdr replaced by a stand-in, plus the export check and 18 generator and snapshot tests), `make lint`, and a trial install into a temporary home using the real vault. Installed for real on one Mac on 2026-11-12; `eww doctor` passes there, and `eww h`, the numbered picker, and the map colors work in real use. Not yet tested: Ubuntu, `setup.sh` end to end, the `fzf` picker. Hood's hand-written CSS rules and cursor code have no tests here.
+Tested with `make test` (127 checks in a temporary home folder, with herdr replaced by a stand-in, plus the export check and 34 tests for the generator, the snapshot, and `eww daily`), `make lint`, and a trial install into a temporary home using the real vault. Installed for real on one Mac on 2026-11-12; `eww doctor` passes there, and `eww h`, the numbered picker, and the map colors work in real use. Not yet tested: Ubuntu, `setup.sh` end to end, the `fzf` picker. Hood's hand-written CSS rules and cursor code have no tests here.
 
 ## In flight
 
 2. **Repo, setup script, launcher.** Built, published, and installed on one Mac. Remaining: the fresh VPS test, one day of real use, then archive the old tool repos.
 3. **Design tokens.** The generator, the Ghostty themes, the Hood palette, and an nvim color scheme are done. Remaining: one day of real use.
+4. **`eww daily`.** Built and tested, with a dry run on the real vault. It adds three passages from `collections/` to the day-note, uses no LLM, and keeps no state outside the vault. Remaining: the first real write, one day of hand use, then a schedule.
 
 ## Next
 
-4. **`eww daily`.** Three resurfaced items in the day-note.
 5. **`eww weekly`.** Up to five rising concepts from primary sources. `eww define` ships with it or just after.
 6. **Lab design session.**
 

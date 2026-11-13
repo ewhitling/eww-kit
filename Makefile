@@ -9,7 +9,7 @@ help:
 test:
 	@sh tests/run.sh
 	@uv run --no-project tools/themes/build.py --check
-	@uv run --no-project --with pytest pytest -q -p no:cacheprovider tools/themes tools/obsidian
+	@uv run --no-project --with pytest pytest -q -p no:cacheprovider tools/themes tools/obsidian tests/test_daily.py
 
 themes:
 	@uv run --no-project tools/themes/build.py
