@@ -13,7 +13,7 @@
 #   EWW_DIR       where to clone to (default: ~/Developer/eww)
 set -eu
 
-EWW_REPO_URL=${EWW_REPO_URL:-https://github.com/ewhitling/eww.git}
+EWW_REPO_URL=${EWW_REPO_URL:-https://github.com/ewhitling/eww-kit.git}
 EWW_DIR=${EWW_DIR:-$HOME/Developer/eww}
 
 say() { printf '→ %s\n' "$1"; }
