@@ -1,0 +1,48 @@
+# Strata night theme for matplotlib. Maintained from tokens/tokens.json.
+# Register fonts first: strata_viz.use("night").
+figure.facecolor: 161619
+figure.edgecolor: 161619
+figure.dpi: 144
+savefig.facecolor: 161619
+savefig.edgecolor: 161619
+savefig.bbox: tight
+axes.facecolor: 161619
+axes.edgecolor: 777780
+axes.linewidth: 1
+axes.labelcolor: ABABB2
+axes.titlecolor: D4D4D8
+axes.titlesize: 15
+axes.titleweight: 600
+axes.titlelocation: left
+axes.titlepad: 14
+axes.labelsize: 10
+axes.spines.top: False
+axes.spines.right: False
+axes.spines.left: False
+axes.grid: True
+axes.grid.axis: y
+axes.axisbelow: True
+axes.prop_cycle: cycler('color', ['4F86D6', 'DB6C33', '22A08F', '9A78D0', 'EDC97B', 'D45C7E'])
+grid.color: 35353C
+grid.linewidth: 1
+lines.linewidth: 2
+lines.solid_capstyle: round
+lines.markersize: 6
+patch.edgecolor: 161619
+patch.linewidth: 2
+xtick.color: 777780
+ytick.color: 777780
+xtick.labelcolor: 929298
+ytick.labelcolor: 929298
+xtick.labelsize: 9
+ytick.labelsize: 9
+ytick.left: False
+xtick.major.size: 4
+font.family: sans-serif
+font.sans-serif: Avenir Next, Figtree, DejaVu Sans
+font.monospace: DM Mono, DejaVu Sans Mono
+font.size: 11
+text.color: D4D4D8
+legend.frameon: False
+legend.fontsize: 9
+legend.labelcolor: ABABB2

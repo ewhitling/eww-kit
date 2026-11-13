@@ -1,0 +1,48 @@
+# Strata paper theme for matplotlib. Maintained from tokens/tokens.json.
+# Register fonts first: strata_viz.use("paper").
+figure.facecolor: F4EEE3
+figure.edgecolor: F4EEE3
+figure.dpi: 144
+savefig.facecolor: F4EEE3
+savefig.edgecolor: F4EEE3
+savefig.bbox: tight
+axes.facecolor: F4EEE3
+axes.edgecolor: 8C826F
+axes.linewidth: 1
+axes.labelcolor: 4D576C
+axes.titlecolor: 14203A
+axes.titlesize: 15
+axes.titleweight: 600
+axes.titlelocation: left
+axes.titlepad: 14
+axes.labelsize: 10
+axes.spines.top: False
+axes.spines.right: False
+axes.spines.left: False
+axes.grid: True
+axes.grid.axis: y
+axes.axisbelow: True
+axes.prop_cycle: cycler('color', ['2F6FC4', 'D2602A', '1A9384', '9A6BC4', '7A4200', 'C8466A'])
+grid.color: DDD3C2
+grid.linewidth: 1
+lines.linewidth: 2
+lines.solid_capstyle: round
+lines.markersize: 6
+patch.edgecolor: F4EEE3
+patch.linewidth: 2
+xtick.color: 8C826F
+ytick.color: 8C826F
+xtick.labelcolor: 646B7C
+ytick.labelcolor: 646B7C
+xtick.labelsize: 9
+ytick.labelsize: 9
+ytick.left: False
+xtick.major.size: 4
+font.family: sans-serif
+font.sans-serif: Avenir Next, Figtree, DejaVu Sans
+font.monospace: DM Mono, DejaVu Sans Mono
+font.size: 11
+text.color: 14203A
+legend.frameon: False
+legend.fontsize: 9
+legend.labelcolor: 4D576C

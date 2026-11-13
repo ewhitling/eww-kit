@@ -1,0 +1,128 @@
+# AI Sniff Test - pattern library
+#
+# Categories are MECE:
+#   lexical     individual words / phrases overrepresented in LLM output
+#   syntactic   sentence-level constructions (grammar templates)
+#   rhetorical  argument moves (HEURISTIC: false positives expected, review-flagged)
+#   formatting  handled in code (structural), not here
+#
+# Entry forms:
+#   - "leverage"                          plain string = case-insensitive literal, word-boundaried
+#   - {label: "...", regex: "...", weight: 1.0, confidence: high|heuristic}
+#
+# weight     contribution to the smell score (default 1.0)
+# confidence high = trust the hit; heuristic = needs human/LLM review
+#
+# Edit freely. Add to the category that fits. Keep regexes simple.
+
+lexical:
+  # buzzwords / overused diction
+  - delve
+  - delving
+  - tapestry
+  - underscore
+  - underscores
+  - leverage
+  - leveraging
+  - seamless
+  - seamlessly
+  - robust
+  - elevate
+  - elevates
+  - unlock
+  - unlocks
+  - unlocking
+  - empower
+  - empowers
+  - empowering
+  - realm
+  - boasts
+  - holistic
+  - cutting-edge
+  - game-changer
+  - game-changing
+  - paradigm
+  - synergy
+  - synergistic
+  - bespoke
+  - curated
+  - meticulous
+  - meticulously
+  - testament
+  - vibrant
+  - nestled
+  - bustling
+  - intricate
+  - intricacies
+  - myriad
+  - plethora
+  - foster
+  - fostering
+  - streamline
+  - streamlined
+  - supercharge
+  - turbocharge
+  - frictionless
+  - effortless
+  - effortlessly
+  # multi-word fillers (regex form for flexibility)
+  - {label: "navigate the <noun>", regex: '\bnavigat(?:e|ing)\s+the\s+(?:complexit|landscape|world|challeng|nuanc)', weight: 1.5, confidence: high}
+  - {label: "in today's ___ world", regex: "\\bin today'?s\\s+(?:fast-?paced|ever-?changing|digital|modern|competitive)\\s+\\w+", weight: 2.0, confidence: high}
+  - {label: "it's worth noting", regex: "\\bit'?s\\s+worth\\s+noting\\b", weight: 1.5, confidence: high}
+  - {label: "at the end of the day", regex: '\bat the end of the day\b', weight: 1.0, confidence: high}
+  - {label: "testament to", regex: '\btestament to\b', weight: 1.5, confidence: high}
+  - {label: "stands as a", regex: '\bstands?\s+as\s+a\b', weight: 1.0, confidence: high}
+  - {label: "a treasure trove", regex: '\btreasure trove\b', weight: 1.5, confidence: high}
+  # significance-inflation adverbs
+  - crucially
+  - importantly
+  - {label: "simply put", regex: '\bsimply put\b', weight: 1.0, confidence: high}
+  - {label: "in summary / to recap", regex: '\b(?:in summary|to summarize|to recap)\b', weight: 1.0, confidence: high}
+
+syntactic:
+  - {label: "not only X but also Y", regex: '\bnot only\b.{1,70}?\bbut also\b', weight: 2.0, confidence: high}
+  - {label: "it's not X, it's Y", regex: "\\bit'?s not (?:just |merely |simply )?[^,.]{2,40}?,\\s*it'?s\\b", weight: 2.5, confidence: high}
+  - {label: "this isn't just X", regex: "\\bthis (?:isn'?t|is not|wasn'?t) (?:just|merely|only|simply)\\b", weight: 2.5, confidence: high}
+  - {label: "more than just", regex: '\bmore than (?:just|merely|simply)\b', weight: 2.0, confidence: high}
+  - {label: "from X to Y construction", regex: '\bfrom\s+[\w-]+\s+to\s+[\w-]+,', weight: 1.0, confidence: heuristic}
+  - {label: "whether X or Y", regex: '\bwhether\s+[\w-]+\s+or\s+[\w-]+\b', weight: 0.5, confidence: heuristic}
+  - {label: "em-dash appositive", regex: '\u2014', weight: 2.0, confidence: high}
+  - {label: "spaced double-hyphen dash", regex: '\s--\s', weight: 1.0, confidence: high}
+  - {label: "triadic list (X, Y, and Z)", regex: '\b[\w-]+,\s+[\w-]+,\s+and\s+[\w-]+\b', weight: 0.5, confidence: heuristic}
+  # staccato fragment pairs ("One action. All outcome." / "No config. No setup.")
+  # anchored on determiner openers, not capitalization: scanning is case-insensitive,
+  # and a generic short-sentence rule would flag ordinary terse prose
+  - {label: "staccato fragment pair", regex: '\b(?:no|one|all|just|zero|pure)\s+[\w-]+(?:\s+[\w-]+)?\.\s+(?:no|one|all|just|zero|pure)\s+[\w-]+(?:\s+[\w-]+)?\.', weight: 2.5, confidence: high}
+  # colon reveal ("The result: chaos.")
+  - {label: "colon reveal (the result: X)", regex: '\bthe\s+(?:result|answer|verdict|outcome|catch|kicker|takeaway|upshot|difference|lesson)\s*:\s+\S', weight: 2.0, confidence: high}
+  - {label: "colon reveal line opener", regex: '^\s*(?:translation|bottom line|net effect)\s*:', weight: 2.0, confidence: high}
+
+sycophancy:
+  # validation openers / glaze. Distinct from slop: these flatter rather than inflate.
+  - {label: "you're absolutely right", regex: "\\byou'?re absolutely right\\b", weight: 3.0, confidence: high}
+  - {label: "you're right", regex: "\\byou'?re right\\b", weight: 2.0, confidence: high}
+  - {label: "great/good question", regex: '\b(?:great|good|excellent|fantastic)\s+question\b', weight: 2.0, confidence: high}
+  - {label: "great/good point", regex: '\b(?:great|good|excellent|fair|valid)\s+point\b', weight: 1.5, confidence: high}
+  - {label: "that's a real/valid X", regex: "\\bthat'?s a (?:real|valid|genuine|fair)\\b", weight: 2.0, confidence: high}
+  - {label: "a real/genuine gap/issue/regression", regex: '\ba (?:real|genuine) (?:gap|issue|problem|concern|regression|miss)\b', weight: 2.0, confidence: high}
+  - {label: "you make/raise a good point", regex: "\\byou (?:make|raise|bring up) a (?:good|great|fair|valid)\\b", weight: 2.0, confidence: high}
+  - {label: "happy/glad to help", regex: '\b(?:happy|glad) to help\b', weight: 1.0, confidence: high}
+  - {label: "absolutely/certainly/of course opener", regex: '^(?:Absolutely|Certainly|Of course)[!,. ]', weight: 1.5, confidence: heuristic}
+  - {label: "excellent/perfect/great opener", regex: '^(?:Excellent|Perfect|Great)[!,. ]', weight: 1.5, confidence: heuristic}
+  - {label: "I appreciate/love that", regex: '\bI (?:appreciate|love|really like) (?:that|your|this)\b', weight: 1.0, confidence: heuristic}
+
+rhetorical:
+  # HEURISTIC: these fire on signatures, not meaning. Expect false positives.
+  - {label: "value-prop conclusion (ship/work + faster/smarter)", regex: '\b(?:ship|move|work|build|scale|grow|think|act)\s+(?:faster|smarter|harder|better|bigger)\b', weight: 2.0, confidence: heuristic}
+  - {label: "imperative outcome promise", regex: '\b(?:unlock|achieve|deliver|drive|maximize|transform)\s+(?:results|value|growth|impact|success|outcomes)\b', weight: 1.5, confidence: heuristic}
+  - {label: "false profundity (the X of Y)", regex: '\bthe\s+(?:power|art|beauty|magic|essence|future)\s+of\b', weight: 1.0, confidence: heuristic}
+  - {label: "revolution / changes everything", regex: '\b(?:revolutioniz|changes everything|redefin|reimagin)', weight: 1.5, confidence: heuristic}
+  - {label: "this changes / reframes the X", regex: '\b(?:changes|reframes|shifts|transforms|reshapes)\s+(?:the\s+)?(?:answer|question|problem|game|equation|calculus|story)\b', weight: 2.5, confidence: high}
+  - {label: "that's the crux / heart of it", regex: "\\bthat'?s the (?:crux|heart|key|core|essence|whole point)\\b", weight: 2.0, confidence: high}
+  # significance inflation: tells the reader a thing matters instead of showing why
+  - {label: "the key insight/takeaway", regex: '\bthe key (?:insight|takeaway|point|thing|idea)\b', weight: 1.5, confidence: high}
+  - {label: "what makes this powerful", regex: '\bwhat makes this (?:powerful|special|different|unique|work)\b', weight: 1.5, confidence: high}
+  # meta-narration: talks about the answer instead of answering
+  - {label: "let me explain / walk you through", regex: '\blet me (?:explain|be clear|break (?:this|that|it) down|walk you through)\b', weight: 1.5, confidence: high}
+  - {label: "here's the thing", regex: "\\bhere'?s the (?:thing|catch|kicker)\\b", weight: 1.5, confidence: high}
+  - {label: "let's dive in", regex: "\\blet'?s dive (?:in|into|right in)\\b", weight: 1.5, confidence: high}

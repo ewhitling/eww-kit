@@ -1,0 +1,9 @@
+# Strata paper for Streamlit. Maintained from tokens/tokens.json.
+# Copy to .streamlit/config.toml
+[theme]
+base = "light"
+primaryColor = "#1F5DAA"
+backgroundColor = "#F4EEE3"
+secondaryBackgroundColor = "#FAF6EE"
+textColor = "#14203A"
+font = "sans serif"
