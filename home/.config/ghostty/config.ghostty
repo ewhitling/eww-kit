@@ -9,3 +9,8 @@ theme = light:strata-paper,dark:strata-night
 cursor-style = block
 cursor-style-blink = false
 shell-integration-features = no-cursor
+
+# Escape pressed with all four modifiers held sends a plain Escape. A Caps Lock
+# key remapped to "hyper when held, Escape when tapped" sends Escape that way,
+# and programs would otherwise receive a long key code and print part of it.
+keybind = ctrl+alt+shift+super+escape=text:\x1b
