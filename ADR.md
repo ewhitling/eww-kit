@@ -174,3 +174,14 @@ This repo is public. Records must not contain personal details, employer names, 
 
 **Consequences.** Obsidian and `eww daily` cannot disagree on the day-note. Filing a day-note into `journal/` does not lose its history. The owner files old day-notes into `journal/<year>/` by hand. No tool moves them, by choice.
 
+## ADR 16: eww weekly fetches itself and gives the agent no tools
+
+- Date: 2026-11-13
+- Status: Accepted. Refines ADR 7.
+
+**Context.** ADR 7 called for a headless agent over a list of primary sources. An agent that browses reads untrusted web text while holding tools, so a page could steer it. It is also slow, and its sources cannot be checked.
+
+**Decision.** The program fetches every source in the vault note `_meta/eww/weekly/sources.md`. A feed gives items from the last 7 days. A web page is read from the top, taking links no earlier weekly note lists, and stopping after a run of links already listed. One agent call with every tool turned off picks up to five concepts from the titles and summaries. It cites items by number, so each link in the note is one the program fetched. Concepts already held, as a definition note or in an earlier weekly note, are dropped. The note goes to `inbox/Weekly YYYY-Www.md` and lists every item read. That list is the history, so no state is kept outside the vault. `eww define` turns a concept worth keeping into a lasting note.
+
+**Consequences.** A web page cannot make the agent act, and the agent cannot invent a source. The agent reads summaries, not full articles, so its reading is shallow, and a page source gives little more than titles. The first run on a page source includes older items, because nothing is listed yet. A page that does not list its newest work first is a poor source; a feed is better.
+
