@@ -14,15 +14,15 @@ Decisions behind this list are in `ADR.md`.
 - **`eww h` (alias `eww w`).** Opens a herdr workspace for a repo, a vault project, or the vault: agent on the left, `eww context` on the right. Bare `eww h` opens the repo around the current folder, or shows a picker. `eww h stop` stops the herdr server.
 - **`eww context`.** Lists what an agent session in a folder loads, with token estimates.
 - **Leak-check commit hook.** gitleaks plus a private denylist. Fails closed.
-- **Theme generator.** `make themes` writes every house-style export from `skills/house-style/tokens/tokens.json`: CSS, chart styles, Swift, Streamlit, Ghostty themes, and the palette of the Hood plugin for Obsidian. `make test` fails when an export is out of date.
+- **Theme generator.** `make themes` writes every house-style export from `skills/house-style/tokens/tokens.json`: CSS, chart styles, Swift, Streamlit, Ghostty themes, the nvim color scheme, and the palette of the Hood plugin for Obsidian. `make test` fails when an export is out of date.
 - **Hood plugin for Obsidian.** Kept in `obsidian/plugins/hood/`. `eww install` copies it into the vault on machines that name one.
 
-Tested with `make test` (120 checks in a temporary home folder, with herdr replaced by a stand-in, plus the export check and 11 generator tests), `make lint`, and a trial install into a temporary home using the real vault. Installed for real on one Mac on 2026-11-12; `eww doctor` passes there, and `eww h`, the numbered picker, and the map colors work in real use. Not yet tested: Ubuntu, `setup.sh` end to end, the `fzf` picker. Hood's hand-written CSS rules and cursor code have no tests here.
+Tested with `make test` (120 checks in a temporary home folder, with herdr replaced by a stand-in, plus the export check and 13 generator tests), `make lint`, and a trial install into a temporary home using the real vault. Installed for real on one Mac on 2026-11-12; `eww doctor` passes there, and `eww h`, the numbered picker, and the map colors work in real use. Not yet tested: Ubuntu, `setup.sh` end to end, the `fzf` picker. Hood's hand-written CSS rules and cursor code have no tests here.
 
 ## In flight
 
 2. **Repo, setup script, launcher.** Built, published, and installed on one Mac. Remaining: the fresh VPS test, one day of real use, then archive the old tool repos.
-3. **Design tokens.** The generator, the Ghostty themes, and the Hood palette are done. Remaining: an nvim color scheme from the tokens, to replace `nord`.
+3. **Design tokens.** The generator, the Ghostty themes, the Hood palette, and an nvim color scheme are done. Remaining: one day of real use.
 
 ## Next
 

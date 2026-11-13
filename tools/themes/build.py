@@ -286,6 +286,160 @@ selection-foreground = {colors['ink']}
 """
 
 
+NVIM_COLORS = HOME_FILES / ".config/nvim/colors/strata.lua"
+# Names used by the nvim color scheme, mapped to color tokens.
+NVIM_TOKENS = {
+    "ground": "ground", "surface": "surface", "raised": "raised", "wash": "wash", "line": "line",
+    "line_strong": "line-strong", "ink": "ink", "muted": "ink-muted", "faint": "ink-faint",
+    "action": "action", "action_soft": "action-soft", "on_action": "on-action", "sun": "sun",
+    "sun_soft": "sun-soft", "ok": "ok", "ok_soft": "ok-soft", "fail": "fail", "fail_soft": "fail-soft",
+}
+# Two more names taken from the terminal's 16 colors, for syntax only.
+NVIM_ANSI = {"purple": "magenta", "cyan": "cyan"}
+# Highlight groups. Each value is Lua table fields that refer to the palette as "c".
+NVIM_GROUPS = {
+    # Editor surfaces
+    "Normal": "fg = c.ink, bg = c.ground",
+    "NormalFloat": "fg = c.ink, bg = c.raised",
+    "FloatBorder": "fg = c.line_strong, bg = c.raised",
+    "FloatTitle": "fg = c.ink, bg = c.raised, bold = true",
+    "Pmenu": "fg = c.ink, bg = c.raised",
+    "PmenuSel": "fg = c.ink, bg = c.action_soft",
+    "PmenuSbar": "bg = c.raised",
+    "PmenuThumb": "bg = c.line_strong",
+    "CursorLine": "bg = c.surface",
+    "CursorColumn": "bg = c.surface",
+    "ColorColumn": "bg = c.surface",
+    "LineNr": "fg = c.faint",
+    "CursorLineNr": "fg = c.ink, bold = true",
+    "SignColumn": "fg = c.faint, bg = c.ground",
+    "FoldColumn": "fg = c.faint, bg = c.ground",
+    "Folded": "fg = c.muted, bg = c.surface",
+    "WinSeparator": "fg = c.line",
+    "StatusLine": "fg = c.ink, bg = c.raised",
+    "StatusLineNC": "fg = c.muted, bg = c.surface",
+    "TabLine": "fg = c.muted, bg = c.surface",
+    "TabLineSel": "fg = c.ink, bg = c.wash",
+    "TabLineFill": "bg = c.surface",
+    "Visual": "bg = c.action_soft",
+    "Search": "fg = c.ink, bg = c.sun_soft",
+    "IncSearch": "fg = c.on_action, bg = c.sun",
+    "CurSearch": "fg = c.on_action, bg = c.sun",
+    "MatchParen": "fg = c.action, bold = true",
+    "NonText": "fg = c.line_strong",
+    "Whitespace": "fg = c.line",
+    "EndOfBuffer": "fg = c.ground",
+    "Conceal": "fg = c.faint",
+    "Directory": "fg = c.action",
+    "Title": "fg = c.ink, bold = true",
+    "Question": "fg = c.action",
+    "MoreMsg": "fg = c.action",
+    "ModeMsg": "fg = c.muted",
+    "ErrorMsg": "fg = c.fail",
+    "WarningMsg": "fg = c.sun",
+    "SpellBad": "undercurl = true, sp = c.fail",
+    "SpellCap": "undercurl = true, sp = c.sun",
+    "SpellRare": "undercurl = true, sp = c.purple",
+    "SpellLocal": "undercurl = true, sp = c.cyan",
+    # Syntax
+    "Comment": "fg = c.faint, italic = true",
+    "Constant": "fg = c.sun",
+    "String": "fg = c.ok",
+    "Character": "fg = c.ok",
+    "Number": "fg = c.sun",
+    "Boolean": "fg = c.sun",
+    "Identifier": "fg = c.ink",
+    "Function": "fg = c.action",
+    "Statement": "fg = c.purple",
+    "Keyword": "fg = c.purple",
+    "Operator": "fg = c.muted",
+    "PreProc": "fg = c.purple",
+    "Type": "fg = c.cyan",
+    "Special": "fg = c.action",
+    "Delimiter": "fg = c.muted",
+    "Underlined": "fg = c.action, underline = true",
+    "Todo": "fg = c.sun, bold = true",
+    "Error": "fg = c.fail",
+    # Diffs and diagnostics
+    "Added": "fg = c.ok",
+    "Removed": "fg = c.fail",
+    "Changed": "fg = c.sun",
+    "DiffAdd": "bg = c.ok_soft",
+    "DiffDelete": "fg = c.fail, bg = c.fail_soft",
+    "DiffChange": "bg = c.sun_soft",
+    "DiffText": "fg = c.ink, bg = c.action_soft",
+    "DiagnosticError": "fg = c.fail",
+    "DiagnosticWarn": "fg = c.sun",
+    "DiagnosticInfo": "fg = c.action",
+    "DiagnosticHint": "fg = c.muted",
+    "DiagnosticOk": "fg = c.ok",
+    "DiagnosticUnderlineError": "undercurl = true, sp = c.fail",
+    "DiagnosticUnderlineWarn": "undercurl = true, sp = c.sun",
+    # Markdown, through treesitter and render-markdown
+    "@markup.heading": "fg = c.ink, bold = true",
+    "@markup.heading.1": "fg = c.action, bold = true",
+    "@markup.heading.2": "fg = c.action, bold = true",
+    "@markup.strong": "bold = true",
+    "@markup.italic": "italic = true",
+    "@markup.strikethrough": "strikethrough = true",
+    "@markup.link": "fg = c.action",
+    "@markup.link.url": "fg = c.muted, underline = true",
+    "@markup.raw": "fg = c.ok",
+    "@markup.quote": "fg = c.muted, italic = true",
+    "@markup.list": "fg = c.action",
+    "@variable": "fg = c.ink",
+    "RenderMarkdownCode": "bg = c.surface",
+    "RenderMarkdownCodeInline": "fg = c.ok, bg = c.surface",
+    "RenderMarkdownH1Bg": "bg = c.action_soft",
+    "RenderMarkdownH2Bg": "bg = c.surface",
+    "RenderMarkdownH3Bg": "bg = c.surface",
+    "RenderMarkdownH4Bg": "bg = c.surface",
+    "RenderMarkdownH5Bg": "bg = c.surface",
+    "RenderMarkdownH6Bg": "bg = c.surface",
+    "RenderMarkdownBullet": "fg = c.action",
+    "RenderMarkdownQuote": "fg = c.line_strong",
+    # mini.nvim
+    "MiniStatuslineModeNormal": "fg = c.on_action, bg = c.action, bold = true",
+    "MiniStatuslineModeInsert": "fg = c.on_action, bg = c.ok, bold = true",
+    "MiniStatuslineModeVisual": "fg = c.on_action, bg = c.purple, bold = true",
+    "MiniStatuslineModeReplace": "fg = c.on_action, bg = c.fail, bold = true",
+    "MiniStatuslineModeCommand": "fg = c.on_action, bg = c.sun, bold = true",
+    "MiniStatuslineModeOther": "fg = c.ink, bg = c.wash",
+    "MiniStatuslineDevinfo": "fg = c.ink, bg = c.wash",
+    "MiniStatuslineFilename": "fg = c.muted, bg = c.raised",
+    "MiniStatuslineFileinfo": "fg = c.ink, bg = c.wash",
+    "MiniStatuslineInactive": "fg = c.faint, bg = c.surface",
+    "MiniPickMatchCurrent": "bg = c.action_soft",
+    "MiniPickMatchRanges": "fg = c.sun, bold = true",
+    "MiniFilesCursorLine": "bg = c.action_soft",
+}
+
+
+def render_nvim(resolved: dict[str, dict[str, str]], ansi16: dict[str, dict[str, str]]) -> str:
+    """An nvim color scheme holding both themes. It follows the 'background' option."""
+    lines = [f"-- Strata for nvim. {GENERATED}", "-- Night when 'background' is dark, paper when it is light.", "local palettes = {"]
+    for theme in THEMES:
+        lines.append(f"  {theme} = {{")
+        for name, token in NVIM_TOKENS.items():
+            lines.append(f'    {name} = "{resolved[theme][token]}",')
+        for name, key in NVIM_ANSI.items():
+            lines.append(f'    {name} = "{ansi16[key][theme]}",')
+        lines.append("  },")
+    lines += [
+        "}",
+        "",
+        'vim.cmd.highlight("clear")',
+        'vim.g.colors_name = "strata"',
+        'local c = vim.o.background == "light" and palettes.paper or palettes.night',
+        "",
+        "local groups = {",
+    ]
+    for group, fields in NVIM_GROUPS.items():
+        lines.append(f'  ["{group}"] = {{ {fields} }},')
+    lines += ["}", "for name, settings in pairs(groups) do", "  vim.api.nvim_set_hl(0, name, settings)", "end", ""]
+    return "\n".join(lines)
+
+
 def render_semantic(resolved: dict[str, dict[str, str]], tokens: dict) -> str:
     data: dict = {theme: {role: resolved[theme][token] for role, token in TERMINAL_ROLES.items()} for theme in THEMES}
     data["glyphs"] = tokens["terminal"]["glyphs"]
@@ -304,6 +458,7 @@ def render_all(root: Path = ROOT) -> dict[Path, str]:
         Path("assets/template.html"): render_template(tokens, (root / "assets/template.html").read_text()),
         Path("swift/Strata.swift"): render_swift(resolved, tokens),
         Path("terminal/semantic.json"): render_semantic(resolved, tokens),
+        NVIM_COLORS: render_nvim(resolved, tokens["terminal"]["ansi16"]),
         HOOD_STYLES: render_hood(resolved, (root / HOOD_STYLES).read_text()),
     }
     for theme in THEMES:

@@ -50,6 +50,10 @@ map("n", "<Esc>", "<cmd>nohlsearch<cr>", { silent = true })
 map({ "n", "v" }, "j", "gj")
 map({ "n", "v" }, "k", "gk")
 
+-- Strata colors. The scheme file in colors/ is generated from the house-style
+-- tokens. nvim reads light or dark from the terminal and reloads the scheme.
+vim.cmd.colorscheme("strata")
+
 -- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
@@ -62,13 +66,6 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
-  {
-    "shaunsingh/nord.nvim",
-    priority = 1000,
-    config = function()
-      vim.cmd.colorscheme("nord")
-    end,
-  },
   {
     -- render-markdown uses Nvim 0.12's built-in treesitter + bundled markdown
     -- parsers. No nvim-treesitter plugin needed for this config.

@@ -88,3 +88,18 @@ def test_hood_night_swaps_page_and_sidebar() -> None:
     assert f"--hood-page: {resolved['night']['surface']};" in night
     assert f"--hood-sidebar: {resolved['night']['ground']};" in night
     assert f"--hood-page: {resolved['paper']['ground']};" in paper
+
+
+def test_nvim_scheme_uses_only_known_palette_names() -> None:
+    names = set(build.NVIM_TOKENS) | set(build.NVIM_ANSI)
+    for group, fields in build.NVIM_GROUPS.items():
+        used = set(re.findall(r"c\.(\w+)", fields))
+        assert used <= names, group
+
+
+def test_nvim_scheme_holds_both_themes() -> None:
+    tokens = build.load_tokens(ROOT)
+    resolved = build.resolve_colors(tokens)
+    lua = build.render_nvim(resolved, tokens["terminal"]["ansi16"])
+    assert f'ground = "{resolved["night"]["ground"]}"' in lua
+    assert f'ground = "{resolved["paper"]["ground"]}"' in lua
