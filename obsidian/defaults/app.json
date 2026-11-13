@@ -9,7 +9,7 @@
   "showInlineTitle": false,
   "showIndentGuide": false,
   "autoPairMarkdown": false,
-  "propertiesInDocument": "visible",
+  "propertiesInDocument": "hidden",
   "defaultViewMode": "source",
   "newFileLocation": "root",
   "newFileFolderPath": "/",

@@ -1,5 +1,4 @@
 """Tests for bin/eww-define. The program has no .py ending, so it is loaded by path."""
-import datetime
 import importlib.machinery
 import importlib.util
 import sys
@@ -105,8 +104,8 @@ def test_checked_body_reports_an_unknown_term() -> None:
 
 
 def test_render_note_marks_the_note_as_machine_written() -> None:
-    note = define.render_note("Ablation", "body", datetime.date(2026, 11, 13))
-    assert note == "---\ncreated: 2026-11-13\n---\n# Ablation\n#llm-generated\n\nbody\n"
+    note = define.render_note("Ablation", "body")
+    assert note == "# Ablation\n#llm-generated\n\nbody\n"
 
 
 def test_main_writes_once_and_never_replaces(home: Path, tmp_path: Path, monkeypatch, capsys) -> None:
@@ -116,7 +115,7 @@ def test_main_writes_once_and_never_replaces(home: Path, tmp_path: Path, monkeyp
     assert not (home / "collections").exists()
     assert define.main(["ablation"]) == 0
     note = home / "collections/definition/Ablation.md"
-    assert note.read_text().startswith("---\ncreated: ")
+    assert note.read_text().startswith("# Ablation\n#llm-generated\n")
     assert "#llm-generated" in note.read_text()
     note.write_text("edited by hand")
     assert define.main(["Ablation"]) == 0

@@ -23,7 +23,6 @@ Settings:
 """
 from __future__ import annotations
 
-import datetime
 import os
 import re
 import shlex
@@ -141,9 +140,9 @@ def checked_body(reply: str) -> str:
     return body
 
 
-def render_note(title: str, body: str, today: datetime.date) -> str:
-    """The full note: front matter, title, the machine-written mark, then the checked body."""
-    return f"---\ncreated: {today:%Y-%m-%d}\n---\n# {title}\n#llm-generated\n\n{body}\n"
+def render_note(title: str, body: str) -> str:
+    """The full note: title, the machine-written mark, then the checked body. No properties block."""
+    return f"# {title}\n#llm-generated\n\n{body}\n"
 
 
 def agent_command() -> list[str]:
@@ -207,7 +206,7 @@ def main(argv: list[str]) -> int:
         print(f"✗ eww define: {command[0]} failed: {error}", file=sys.stderr)
         return 1
 
-    note = render_note(title, body, datetime.date.today())
+    note = render_note(title, body)
     if dry_run:
         print(note, end="")
         return 0
