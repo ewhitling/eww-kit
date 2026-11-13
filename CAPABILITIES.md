@@ -11,13 +11,15 @@ Decisions behind this list are in `ADR.md`.
 - **Skills.** 17 own skills in `skills/` and 33 pinned third-party skills in `skills.lock`.
 - **`eww install`.** Links `home/` files and programs, deploys own and pinned third-party skills to Claude and Pi, builds instructions from the base plus local suffix files, installs the leak-check hook where a denylist exists. Existing files are backed up, never deleted.
 - **`eww update`, `eww doctor`, `setup.sh`.**
+- **`eww h` (alias `eww w`).** Opens a herdr workspace for a repo, a vault project, or the vault: agent on the left, `eww context` on the right. Bare `eww h` opens the repo around the current folder, or shows a picker. `eww h stop` stops the herdr server.
+- **`eww context`.** Lists what an agent session in a folder loads, with token estimates.
 - **Leak-check commit hook.** gitleaks plus a private denylist. Fails closed.
 
-Tested with `make test` (74 checks in a temporary home folder), `make lint`, and a trial install into a temporary home using the real vault. Not yet tested: Ubuntu, a real install on a Mac, `setup.sh` end to end.
+Tested with `make test` (112 checks in a temporary home folder; herdr is replaced by a stand-in), `make lint`, and a trial install into a temporary home using the real vault. Not yet tested: Ubuntu, a real install on a Mac, `setup.sh` end to end, `eww h` against a live herdr session, the picker.
 
 ## In flight
 
-2. **Repo, setup script, launcher.** Mechanism and content are in place. Remaining: test on a fresh VPS, create the public GitHub repo and push, install on a Mac (which retires the old tools), then `h` and `w`, and `context`.
+2. **Repo, setup script, launcher.** Mechanism and content are in place. Remaining: test on a fresh VPS, create the public GitHub repo and push, install on a Mac (which retires the old tools), then try `eww h` for a day.
 
 ## Next
 

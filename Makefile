@@ -8,5 +8,5 @@ test:
 	@sh tests/run.sh
 
 lint:
-	@shellcheck setup.sh bin/eww bin/eww-install bin/eww-update bin/eww-doctor hooks/pre-commit tests/run.sh
+	@shellcheck setup.sh bin/eww bin/eww-install bin/eww-update bin/eww-doctor bin/eww-h bin/eww-context hooks/pre-commit tests/run.sh
 	@zsh -n home/.config/eww/eww.zsh

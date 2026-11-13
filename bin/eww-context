@@ -1,0 +1,185 @@
+#!/bin/sh
+# eww: work | List what an agent session in this folder will load.
+#
+# A plain walk over the known places Claude Code loads from: instruction
+# files, the memory index, skills, agents, hooks, and MCP servers. It does not
+# imitate the loader. Run /context inside the agent for the exact answer.
+# shellcheck disable=SC2088  # "~" appears in output for the reader. It is not meant to expand.
+set -eu
+
+case ${1:-} in
+  -h | --help)
+    cat <<'HELP'
+eww context [DIR]
+
+List what an agent session opened in DIR (default: the current folder) will
+load: instructions, memory, skills, agents, hooks, and MCP servers.
+
+Token counts are estimates (characters divided by 4).
+Run /context inside the agent for the exact answer.
+HELP
+    exit 0
+    ;;
+esac
+
+EWW_HOME=${EWW_HOME:-$HOME}
+CLAUDE_DIR=$EWW_HOME/.claude
+
+if ! dir=$(cd "${1:-$PWD}" 2>/dev/null && pwd); then
+  printf '✗ eww context: folder not found: %s\n' "${1:-}" >&2
+  exit 1
+fi
+
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && [ -z "${EWW_NO_COLOR:-}" ] && [ "${TERM:-}" != dumb ]; then
+  bold=$(printf '\033[1m') dim=$(printf '\033[2m') yellow=$(printf '\033[33m')
+  accent=$(printf '\033[34m') reset=$(printf '\033[0m')
+else
+  bold='' dim='' yellow='' accent='' reset=''
+fi
+heading() { printf '%s%s%s\n' "$bold" "$1" "$reset"; }
+group() { printf '\n%s─ %s ─────────────────────────────%s\n' "$dim" "$1" "$reset"; }
+row() { printf '  %s%-10s%s %s\n' "$dim" "$1" "$reset" "$2"; }
+none() { row "$1" "${dim}(none)${reset}"; }
+
+# Shorten a path for display: the home folder becomes "~".
+short() {
+  case $1 in
+    "$EWW_HOME"*) printf '~%s' "${1#"$EWW_HOME"}" ;;
+    *) printf '%s' "$1" ;;
+  esac
+}
+
+# Format a token estimate: ~640 below one thousand, ~2.1k above.
+tokens() {
+  if [ "$1" -ge 1000 ]; then
+    printf '%s~%d.%dk%s' "$accent" $(($1 / 1000)) $(($1 % 1000 / 100)) "$reset"
+  else
+    printf '%s~%d%s' "$accent" "$1" "$reset"
+  fi
+}
+
+preload_bytes=0
+
+# One row for a file that is loaded in full: line count and token estimate.
+file_row() {
+  if [ ! -f "$2" ]; then
+    none "$1"
+    return 0
+  fi
+  bytes=$(($(wc -c <"$2") + 0))
+  lines=$(($(wc -l <"$2") + 0))
+  preload_bytes=$((preload_bytes + bytes))
+  note=''
+  if head -n 1 "$2" | grep -q '^<!-- Built by eww install'; then
+    note=" ${dim}(built by eww)${reset}"
+  fi
+  row "$1" "$lines lines, $(tokens $((bytes / 4))) tokens$note"
+}
+
+count_entries() {
+  count=0
+  for entry in "$1"/*; do
+    [ -e "$entry" ] && count=$((count + 1))
+  done
+  printf '%d' "$count"
+}
+
+# The entry names in a folder, joined by commas, with any .md ending removed.
+entry_names() {
+  names=''
+  for entry in "$1"/*; do
+    [ -e "$entry" ] || continue
+    name=${entry##*/}
+    names="${names:+$names, }${name%.md}"
+  done
+  printf '%s' "$names"
+}
+
+# One row for a settings file: the names of its hook events.
+hooks_row() {
+  if [ ! -f "$2" ]; then
+    none "$1"
+    return 0
+  fi
+  if ! command -v jq >/dev/null 2>&1; then
+    row "$1" "present ${dim}(install jq to list events)${reset}"
+    return 0
+  fi
+  events=$(jq -r '(.hooks // {}) | keys | join(", ")' "$2" 2>/dev/null || true)
+  if [ -n "$events" ]; then
+    row "$1" "$events"
+  else
+    row "$1" "${dim}present, no hooks${reset}"
+  fi
+}
+
+heading "context: what an agent session in ${dir##*/} loads"
+
+group "workspace"
+row "dir" "$(short "$dir")"
+if git -C "$dir" rev-parse --git-dir >/dev/null 2>&1; then
+  branch=$(git -C "$dir" branch --show-current 2>/dev/null || true)
+  if [ -n "$(git -C "$dir" status --porcelain 2>/dev/null | head -n 1)" ]; then
+    state="${yellow}dirty${reset}"
+  else
+    state=clean
+  fi
+  row "git" "${branch:-detached}, $state"
+fi
+
+group "instructions"
+file_row "global" "$CLAUDE_DIR/CLAUDE.md"
+file_row "project" "$dir/CLAUDE.md"
+file_row "local" "$dir/CLAUDE.local.md"
+
+group "memory"
+# Claude Code keys project memory by the folder path, with every character
+# that is not a letter or digit replaced by a dash.
+memory="$CLAUDE_DIR/projects/$(printf '%s' "$dir" | sed 's|[^A-Za-z0-9]|-|g')/memory/MEMORY.md"
+if [ -f "$memory" ]; then
+  entries=$(grep -c '^- ' "$memory" || true)
+  bytes=$(($(wc -c <"$memory") + 0))
+  preload_bytes=$((preload_bytes + bytes))
+  row "MEMORY.md" "${entries:-0} entries, $(tokens $((bytes / 4))) tokens"
+else
+  none "MEMORY.md"
+fi
+
+group "skills"
+row "global" "$(count_entries "$CLAUDE_DIR/skills") in $(short "$CLAUDE_DIR/skills")"
+if [ -d "$dir/.claude/skills" ]; then
+  row "project" "$(entry_names "$dir/.claude/skills")"
+else
+  none "project"
+fi
+
+group "agents"
+if [ -d "$CLAUDE_DIR/agents" ] && [ "$(count_entries "$CLAUDE_DIR/agents")" -gt 0 ]; then
+  row "global" "$(entry_names "$CLAUDE_DIR/agents")"
+else
+  none "global"
+fi
+if [ -d "$dir/.claude/agents" ]; then
+  row "project" "$(entry_names "$dir/.claude/agents")"
+else
+  none "project"
+fi
+
+group "hooks"
+hooks_row "global" "$CLAUDE_DIR/settings.json"
+hooks_row "project" "$dir/.claude/settings.json"
+hooks_row "local" "$dir/.claude/settings.local.json"
+
+group "mcp"
+if [ ! -f "$dir/.mcp.json" ]; then
+  none ".mcp.json"
+elif command -v jq >/dev/null 2>&1; then
+  servers=$(jq -r '(.mcpServers // {}) | keys | join(", ")' "$dir/.mcp.json" 2>/dev/null || true)
+  row ".mcp.json" "${servers:-${dim}no servers${reset}}"
+else
+  row ".mcp.json" "present ${dim}(install jq to list servers)${reset}"
+fi
+
+printf '\n'
+row "preload" "${bold}$(tokens $((preload_bytes / 4))) tokens${reset} ${dim}(instructions and memory, characters / 4)${reset}"
+printf '%sestimates only. Run /context inside the agent for the exact answer.%s\n' "$dim" "$reset"

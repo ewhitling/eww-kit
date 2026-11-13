@@ -1,7 +1,7 @@
 #!/bin/sh
 # First run on a new machine. Unattended. Works on macOS and Ubuntu.
 #
-#   1. Install base tools: git, zsh, curl, fzf, neovim, uv
+#   1. Install base tools: git, zsh, curl, fzf, jq, neovim, uv
 #   2. Clone this repo, or use the checkout this script is running from
 #   3. Run eww install
 #
@@ -27,7 +27,7 @@ install_base_tools() {
         NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
         eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"
       fi
-      for tool in git fzf neovim uv gitleaks; do
+      for tool in git fzf jq neovim uv gitleaks; do
         command_name=$tool
         [ "$tool" = neovim ] && command_name=nvim
         have "$command_name" || brew install "$tool"
@@ -42,7 +42,7 @@ install_base_tools() {
       [ "$(id -u)" -eq 0 ] || sudo=sudo
       say "installing packages with apt"
       $sudo apt-get update -qq
-      DEBIAN_FRONTEND=noninteractive $sudo apt-get install -y -qq git zsh curl fzf neovim ca-certificates
+      DEBIAN_FRONTEND=noninteractive $sudo apt-get install -y -qq git zsh curl fzf jq neovim ca-certificates
       if ! have uv; then
         say "installing uv"
         curl -LsSf https://astral.sh/uv/install.sh | sh

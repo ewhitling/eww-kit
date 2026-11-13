@@ -240,5 +240,116 @@ else
   printf 'SKIP: leak-check hook tests (gitleaks is not installed)\n'
 fi
 
+# --- h, w, and context -----------------------------------------------------
+# A stand-in for herdr records each call, so the tests never touch a real session.
+STUB=$WORK/stub
+mkdir -p "$STUB"
+cat >"$STUB/herdr" <<'STUB_HERDR'
+#!/bin/sh
+printf '%s\n' "${*:-attach}" >>"$HERDR_LOG"
+case "${1:-} ${2:-}" in
+  "status server") [ -n "${STUB_SERVER_DOWN:-}" ] || echo "status: running" ;;
+  "workspace list")
+    if [ -n "${STUB_EXISTING:-}" ]; then
+      printf '{"result":{"workspaces":[{"label":"%s","workspace_id":"ws9"}]}}\n' "$STUB_EXISTING"
+    else
+      echo '{"result":{"workspaces":[]}}'
+    fi
+    ;;
+  "workspace create") echo '{"result":{"workspace":{"workspace_id":"ws1"},"root_pane":{"pane_id":"p1"}}}' ;;
+  "pane split") echo '{"result":{"pane":{"pane_id":"p2"}}}' ;;
+esac
+STUB_HERDR
+chmod +x "$STUB/herdr"
+export HERDR_LOG="$WORK/herdr.log"
+export EWW_REPOS_DIR="$WORK/repos"
+mkdir -p "$EWW_REPOS_DIR/demo-repo/sub" "$EWW_REPOS_DIR/my.repo" "$EWW_REPOS_DIR/not-a-repo" "$WORK/vault2/projects/side-project"
+git -C "$EWW_REPOS_DIR/demo-repo" init -q
+git -C "$EWW_REPOS_DIR/my.repo" init -q
+REPOS_REAL=$(cd "$EWW_REPOS_DIR" && pwd -P)
+printf '%s\n' "$WORK/vault2" >"$EWW_HOME/.config/eww/vault"
+run_h() { (PATH="$STUB:$PATH" HERDR_PANE_ID=inside "$COPY/bin/eww-h" "$@"); }
+logged() { grep -q -F -- "$1" "$HERDR_LOG"; }
+
+if command -v jq >/dev/null 2>&1; then
+  : >"$HERDR_LOG"
+  check "h NAME opens the repo" run_h demo-repo
+  sleep 1
+  check "h creates the workspace in the repo folder" logged "workspace create --cwd $EWW_REPOS_DIR/demo-repo --label demo-repo --no-focus"
+  check "h splits a pane to the right" logged "pane split p1 --direction right"
+  check "h runs context in the right pane" logged "pane run p2 $COPY/bin/eww-context"
+  check "h starts claude in the left pane" logged "agent start demo-repo --kind claude --pane p1"
+  check "h focuses the workspace" logged "workspace focus ws1"
+  check "h does not attach when already inside herdr" sh -c "! grep -q -x attach '$HERDR_LOG'"
+
+  : >"$HERDR_LOG"
+  check "h focuses an existing workspace" sh -c "STUB_EXISTING=demo-repo PATH='$STUB':\"\$PATH\" HERDR_PANE_ID=inside '$COPY/bin/eww-h' demo-repo"
+  check "an existing workspace is not created again" sh -c "! grep -q 'workspace create' '$HERDR_LOG'"
+  check "the existing workspace id is focused" logged "workspace focus ws9"
+
+  : >"$HERDR_LOG"
+  check "h with no target opens the repo around the current folder" sh -c "cd '$EWW_REPOS_DIR/demo-repo/sub' && PATH='$STUB':\"\$PATH\" HERDR_PANE_ID=inside '$COPY/bin/eww-h'"
+  check "the repo root is used, not the sub-folder" logged "workspace create --cwd $REPOS_REAL/demo-repo --label demo-repo"
+
+  : >"$HERDR_LOG"
+  check "h vault opens the vault" run_h vault
+  check "the vault folder is used" logged "workspace create --cwd $WORK/vault2 --label vault2"
+
+  : >"$HERDR_LOG"
+  check "h NAME finds a vault project" run_h side-project
+  check "the project folder is used" logged "--cwd $WORK/vault2/projects/side-project --label side-project"
+
+  : >"$HERDR_LOG"
+  check "a dot in the name becomes a dash in the label" sh -c "PATH='$STUB':\"\$PATH\" HERDR_PANE_ID=inside '$COPY/bin/eww-h' my.repo && grep -q -- '--label my-repo' '$HERDR_LOG'"
+
+  : >"$HERDR_LOG"
+  check "EWW_AGENT picks the agent" sh -c "EWW_AGENT=pi PATH='$STUB':\"\$PATH\" HERDR_PANE_ID=inside '$COPY/bin/eww-h' demo-repo && sleep 1 && grep -q -- '--kind pi' '$HERDR_LOG'"
+
+  : >"$HERDR_LOG"
+  check "outside herdr, h attaches after focusing" sh -c "PATH='$STUB':\"\$PATH\" HERDR_PANE_ID= '$COPY/bin/eww-h' demo-repo && grep -q -x attach '$HERDR_LOG'"
+
+  : >"$HERDR_LOG"
+  check "w is an alias for h" sh -c "PATH='$STUB':\"\$PATH\" HERDR_PANE_ID=inside '$COPY/bin/eww' w demo-repo && grep -q 'workspace focus ws1' '$HERDR_LOG'"
+
+  check "a folder that is not a repo is not a target" sh -c "! PATH='$STUB':\"\$PATH\" '$COPY/bin/eww-h' not-a-repo"
+  check "an unknown name exits 1 and says so" sh -c "PATH='$STUB':\"\$PATH\" '$COPY/bin/eww-h' nope 2>&1 | grep -q 'is not a repo'"
+  check "an unknown option exits 2" sh -c "PATH='$STUB':\"\$PATH\" '$COPY/bin/eww-h' --bogus; test \$? -eq 2"
+
+  : >"$HERDR_LOG"
+  check "h stop stops the server" run_h stop
+  check "the stop call reaches herdr" logged "server stop"
+  : >"$HERDR_LOG"
+  check "h stop does nothing when the server is down" sh -c "STUB_SERVER_DOWN=1 PATH='$STUB':\"\$PATH\" '$COPY/bin/eww-h' stop | grep -q 'not running' && ! grep -q 'server stop' '$HERDR_LOG'"
+else
+  printf 'SKIP: h tests (jq is not installed)\n'
+fi
+rm "$EWW_HOME/.config/eww/vault"
+
+PROJECT=$WORK/ctx-project
+mkdir -p "$PROJECT/.claude/skills/local-skill" "$PROJECT/.claude/agents"
+printf 'project rules\n' >"$PROJECT/CLAUDE.md"
+printf 'a reviewer\n' >"$PROJECT/.claude/agents/reviewer.md"
+printf '{"mcpServers":{"alpha":{},"beta":{}}}\n' >"$PROJECT/.mcp.json"
+printf '{"hooks":{"SessionStart":[]}}\n' >"$PROJECT/.claude/settings.json"
+PROJECT_REAL=$(cd "$PROJECT" && pwd)
+memory_dir=$EWW_HOME/.claude/projects/$(printf '%s' "$PROJECT_REAL" | sed 's|[^A-Za-z0-9]|-|g')/memory
+mkdir -p "$memory_dir"
+printf -- '- one\n- two\n' >"$memory_dir/MEMORY.md"
+context=$("$COPY/bin/eww-context" "$PROJECT")
+check "context names the folder" contains "$context" "session in ctx-project loads"
+check "context marks instructions built by eww" contains "$context" "(built by eww)"
+check "context counts the project instructions" sh -c "printf '%s' \"\$1\" | grep 'project' | grep -q '1 lines'" _ "$context"
+check "context reports a missing file as none" sh -c "printf '%s' \"\$1\" | grep 'local' | grep -q '(none)'" _ "$context"
+check "context counts memory entries" contains "$context" "2 entries"
+check "context lists project skills" contains "$context" "local-skill"
+check "context lists project agents" contains "$context" "reviewer"
+check "context reports the preload total" contains "$context" "preload"
+if command -v jq >/dev/null 2>&1; then
+  check "context lists MCP servers" contains "$context" "alpha, beta"
+  check "context lists hook events" contains "$context" "SessionStart"
+fi
+check "context defaults to the current folder" sh -c "cd '$PROJECT' && '$COPY/bin/eww-context' | grep -q 'ctx-project'"
+check "context fails on a missing folder" sh -c "! '$COPY/bin/eww-context' '$WORK/no-such-folder'"
+
 printf '%s passed, %s failed\n' "$passed" "$failed"
 [ "$failed" -eq 0 ]
