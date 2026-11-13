@@ -1,0 +1,6 @@
+# Third-party skills. eww install fetches each one at its pinned commit.
+# One skill per line, separated by spaces:
+#
+#   name  git-url  commit  [folder inside the repo that holds SKILL.md]
+#
+# The folder defaults to the repo root.

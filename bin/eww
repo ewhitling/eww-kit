@@ -1,0 +1,105 @@
+#!/bin/sh
+# eww: the launcher. It holds no logic of its own.
+# `eww <verb>` runs a standalone program named `eww-<verb>`.
+# Bare `eww` prints the map of every such program it can find.
+set -eu
+
+# Find the repo this script lives in, following symlinks.
+self=$0
+while [ -L "$self" ]; do
+  link=$(readlink "$self")
+  case $link in
+    /*) self=$link ;;
+    *) self=$(dirname "$self")/$link ;;
+  esac
+done
+REPO=$(cd "$(dirname "$self")/.." && pwd -P)
+VERSION=$(cat "$REPO/VERSION" 2>/dev/null || echo unknown)
+
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && [ -z "${EWW_NO_COLOR:-}" ] && [ "${TERM:-}" != dumb ]; then
+  bold=$(printf '\033[1m') dim=$(printf '\033[2m') red=$(printf '\033[31m')
+  accent=$(printf '\033[34m') reset=$(printf '\033[0m')
+else
+  bold='' dim='' red='' accent='' reset=''
+fi
+
+# Print one line per program: "group<TAB>verb<TAB>summary".
+# A program describes itself with a comment line: "# eww: <group> | <summary>".
+list_programs() {
+  seen=' '
+  old_ifs=$IFS
+  IFS=:
+  for dir in "$REPO/bin" $PATH; do
+    IFS=$old_ifs
+    [ -d "$dir" ] || continue
+    for program in "$dir"/eww-*; do
+      [ -f "$program" ] && [ -x "$program" ] || continue
+      verb=${program##*/eww-}
+      case $seen in *" $verb "*) continue ;; esac
+      seen="$seen$verb "
+      # A symlink to a differently named program is an alias. Leave it off the map.
+      if [ -L "$program" ]; then
+        target=$(readlink "$program")
+        [ "${target##*/}" = "eww-$verb" ] || continue
+      fi
+      meta=$(sed -n 's/^# eww: //p' "$program" 2>/dev/null | head -n 1)
+      if [ -n "$meta" ]; then
+        group=$(printf '%s' "$meta" | cut -d'|' -f1 | tr -d ' ')
+        summary=$(printf '%s' "$meta" | cut -d'|' -f2- | sed 's/^ *//')
+      else
+        group=other summary=''
+      fi
+      printf '%s\t%s\t%s\n' "$group" "$verb" "$summary"
+    done
+  done
+  IFS=$old_ifs
+}
+
+print_map() {
+  programs=$(list_programs)
+  printf '%seww %s%s  mise-en-place for deep work\n' "$bold" "$VERSION" "$reset"
+  for group in place work capture other; do
+    rows=$(printf '%s\n' "$programs" | awk -F'\t' -v g="$group" '$1 == g' | sort -t"$(printf '\t')" -k2)
+    [ -n "$rows" ] || continue
+    printf '\n%s─ %s ─────────────────────────────%s\n' "$dim" "$group" "$reset"
+    printf '%s\n' "$rows" | while IFS="$(printf '\t')" read -r _ verb summary; do
+      printf '  %s%-11s%s %s\n' "$accent" "$verb" "$reset" "$summary"
+    done
+  done
+  printf '\n%seww help <verb> for detail%s\n' "$dim" "$reset"
+}
+
+find_program() {
+  if [ -x "$REPO/bin/eww-$1" ]; then
+    printf '%s\n' "$REPO/bin/eww-$1"
+  else
+    command -v "eww-$1" 2>/dev/null || true
+  fi
+}
+
+run_verb() {
+  verb=$1
+  shift
+  program=$(find_program "$verb")
+  if [ -z "$program" ]; then
+    printf '%s✗ eww: unknown command "%s"%s\n\n' "$red" "$verb" "$reset" >&2
+    print_map >&2
+    exit 1
+  fi
+  exec "$program" "$@"
+}
+
+case ${1:-help} in
+  help | -h | --help)
+    if [ $# -ge 2 ]; then
+      run_verb "$2" --help
+    fi
+    print_map
+    ;;
+  version | -v | --version)
+    printf 'eww %s\n' "$VERSION"
+    ;;
+  *)
+    run_verb "$@"
+    ;;
+esac

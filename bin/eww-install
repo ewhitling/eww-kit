@@ -1,0 +1,274 @@
+#!/bin/sh
+# eww: place | Install everything. Safe to run again.
+#
+# Links files into the home folder, deploys skills, builds agent instructions,
+# and installs the leak-check commit hook. It never deletes a file that is not
+# its own: an existing file is moved to a dated backup folder first.
+set -eu
+
+case ${1:-} in
+  -h | --help)
+    cat <<'HELP'
+eww install
+
+Install everything from this repo into the home folder. Safe to run again.
+
+  1. Link files from home/ into ~
+  2. Link the eww programs into ~/.local/bin
+  3. Link skills into the Claude and Pi skill folders
+     (third-party skills are fetched at the commits pinned in skills.lock)
+  4. Build agent instructions from instructions/base.md
+     plus every file in ~/.config/eww/suffixes/
+  5. Install the leak-check commit hook, where ~/.config/eww/denylist.txt exists
+
+An existing file that eww did not create is moved to
+~/.local/state/eww/backup/<time>/ before it is replaced.
+
+Set EWW_HOME to install into a different home folder, for testing.
+HELP
+    exit 0
+    ;;
+esac
+
+self=$0
+while [ -L "$self" ]; do
+  link=$(readlink "$self")
+  case $link in
+    /*) self=$link ;;
+    *) self=$(dirname "$self")/$link ;;
+  esac
+done
+REPO=$(cd "$(dirname "$self")/.." && pwd -P)
+
+EWW_HOME=${EWW_HOME:-$HOME}
+CONFIG=$EWW_HOME/.config/eww
+SHARE=$EWW_HOME/.local/share/eww
+BACKUP_DIR=$EWW_HOME/.local/state/eww/backup/$(date +%Y%m%d-%H%M%S)
+CLAUDE_DIR=$EWW_HOME/.claude
+PI_DIR=$EWW_HOME/.pi/agent
+MARKER='<!-- Built by eww install. Edit instructions/base.md or a suffix file, then run eww install. -->'
+
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && [ -z "${EWW_NO_COLOR:-}" ] && [ "${TERM:-}" != dumb ]; then
+  green=$(printf '\033[32m') yellow=$(printf '\033[33m') red=$(printf '\033[31m') reset=$(printf '\033[0m')
+else
+  green='' yellow='' red='' reset=''
+fi
+ok() { printf '%s✓%s %s\n' "$green" "$reset" "$1"; }
+warn() { printf '%s!%s %s\n' "$yellow" "$reset" "$1" >&2; }
+fail() {
+  printf '%s✗%s %s\n' "$red" "$reset" "$1" >&2
+  exit 1
+}
+
+backed_up=0
+linked=0
+
+# Move an existing file or folder out of the way, keeping its path under the backup folder.
+backup() {
+  relative_path=${1#"$EWW_HOME"/}
+  destination=$BACKUP_DIR/$relative_path
+  mkdir -p "$(dirname "$destination")"
+  mv "$1" "$destination"
+  backed_up=$((backed_up + 1))
+  warn "moved existing ~/$relative_path to the backup folder"
+}
+
+# Make target a symlink to source. Do nothing when it already is.
+link() {
+  source_path=$1
+  target_path=$2
+  if [ -L "$target_path" ] && [ "$(readlink "$target_path")" = "$source_path" ]; then
+    return 0
+  fi
+  if [ -e "$target_path" ] || [ -L "$target_path" ]; then
+    backup "$target_path"
+  fi
+  mkdir -p "$(dirname "$target_path")"
+  ln -s "$source_path" "$target_path"
+  linked=$((linked + 1))
+}
+
+# Step 1: files in home/ are linked to the same path under the home folder.
+link_home_files() {
+  [ -d "$REPO/home" ] || return 0
+  count=0
+  # The file list is written to a temporary file so the loop runs in this shell.
+  list=$(mktemp)
+  (cd "$REPO/home" && find . -type f ! -name .gitkeep ! -name .DS_Store) >"$list"
+  while IFS= read -r relative; do
+    relative=${relative#./}
+    link "$REPO/home/$relative" "$EWW_HOME/$relative"
+    count=$((count + 1))
+  done <"$list"
+  rm -f "$list"
+  ok "home files linked: $count"
+}
+
+# Step 2: every eww program becomes available on the path.
+link_programs() {
+  count=0
+  for program in "$REPO"/bin/eww "$REPO"/bin/eww-*; do
+    [ -e "$program" ] || continue
+    link "$program" "$EWW_HOME/.local/bin/${program##*/}"
+    count=$((count + 1))
+  done
+  ok "programs linked into ~/.local/bin: $count"
+}
+
+# Fetch one third-party skill at its pinned commit. Prints the skill folder.
+fetch_third_party() {
+  name=$1 url=$2 commit=$3 subpath=${4:-.}
+  checkout=$SHARE/third-party/$name
+  if [ ! -d "$checkout/.git" ]; then
+    mkdir -p "$SHARE/third-party"
+    git clone --quiet "$url" "$checkout" || return 1
+  fi
+  if ! git -C "$checkout" cat-file -e "$commit^{commit}" 2>/dev/null; then
+    git -C "$checkout" fetch --quiet origin || return 1
+  fi
+  git -C "$checkout" checkout --quiet --detach "$commit" || return 1
+  printf '%s\n' "$checkout/$subpath"
+}
+
+# Link one skill folder into each agent's skill folder.
+# A suffix file named after the skill is appended to a built copy of it.
+deploy_skill() {
+  name=$1
+  source_dir=$2
+  suffix=$CONFIG/suffixes/skills/$name.md
+  if [ -f "$suffix" ]; then
+    built=$SHARE/built-skills/$name
+    rm -rf "$built"
+    mkdir -p "$SHARE/built-skills"
+    cp -R "$source_dir" "$built"
+    {
+      printf '\n'
+      cat "$suffix"
+    } >>"$built/SKILL.md"
+    source_dir=$built
+  fi
+  link "$source_dir" "$CLAUDE_DIR/skills/$name"
+  link "$source_dir" "$PI_DIR/skills/$name"
+}
+
+# Remove skill links that eww made earlier and that now point at nothing.
+remove_stale_skill_links() {
+  for skills_dir in "$CLAUDE_DIR/skills" "$PI_DIR/skills"; do
+    for entry in "$skills_dir"/*; do
+      [ -L "$entry" ] && [ ! -e "$entry" ] || continue
+      case $(readlink "$entry") in
+        "$REPO"/skills/* | "$SHARE"/*) rm "$entry" ;;
+      esac
+    done
+  done
+}
+
+# Step 3: skills written for this repo, then third-party skills from skills.lock.
+deploy_skills() {
+  mkdir -p "$CLAUDE_DIR/skills" "$PI_DIR/skills"
+  own=0
+  for skill in "$REPO"/skills/*/; do
+    [ -f "${skill}SKILL.md" ] || continue
+    skill=${skill%/}
+    deploy_skill "${skill##*/}" "$skill"
+    own=$((own + 1))
+  done
+  fetched=0
+  if [ -f "$REPO/skills.lock" ]; then
+    while read -r name url commit subpath; do
+      case $name in '' | '#'*) continue ;; esac
+      if skill_dir=$(fetch_third_party "$name" "$url" "$commit" "$subpath") && [ -f "$skill_dir/SKILL.md" ]; then
+        deploy_skill "$name" "$skill_dir"
+        fetched=$((fetched + 1))
+      else
+        warn "could not fetch skill $name from $url at $commit"
+        failed_skills=$((failed_skills + 1))
+      fi
+    done <"$REPO/skills.lock"
+  fi
+  remove_stale_skill_links
+  ok "skills deployed: $own own, $fetched third-party"
+}
+
+# Write one instruction file from the base plus the suffix files, in name order.
+write_instructions() {
+  target=$1
+  built=$(mktemp)
+  {
+    printf '%s\n\n' "$MARKER"
+    cat "$REPO/instructions/base.md"
+    for suffix in "$CONFIG"/suffixes/*.md; do
+      [ -f "$suffix" ] || continue
+      printf '\n'
+      cat "$suffix"
+    done
+  } >"$built"
+  if [ -f "$target" ] && [ ! -L "$target" ] && cmp -s "$built" "$target"; then
+    rm -f "$built"
+    return 0
+  fi
+  if [ -e "$target" ] || [ -L "$target" ]; then
+    if [ ! -L "$target" ] && [ "$(head -n 1 "$target")" = "$MARKER" ]; then
+      rm -f "$target"
+    else
+      backup "$target"
+    fi
+  fi
+  mkdir -p "$(dirname "$target")"
+  mv "$built" "$target"
+}
+
+# Step 4: agent instructions for Claude and Pi.
+build_instructions() {
+  if [ ! -f "$REPO/instructions/base.md" ]; then
+    warn "instructions/base.md is missing, so agent instructions were left as they are"
+    return 0
+  fi
+  suffix_count=0
+  for suffix in "$CONFIG"/suffixes/*.md; do
+    if [ -f "$suffix" ]; then
+      suffix_count=$((suffix_count + 1))
+    elif [ -L "$suffix" ]; then
+      warn "suffix ${suffix##*/} points at a missing file and was skipped"
+    fi
+  done
+  write_instructions "$CLAUDE_DIR/CLAUDE.md"
+  write_instructions "$PI_DIR/AGENTS.md"
+  ok "agent instructions built: base plus $suffix_count suffix file(s)"
+}
+
+# Step 5: the commit hook that scans for secrets and personal strings.
+install_hook() {
+  if [ ! -f "$CONFIG/denylist.txt" ]; then
+    ok "leak-check hook skipped: no ~/.config/eww/denylist.txt on this machine"
+    return 0
+  fi
+  if [ ! -d "$REPO/.git" ]; then
+    warn "leak-check hook skipped: $REPO is not a git checkout"
+    return 0
+  fi
+  hook=$REPO/.git/hooks/pre-commit
+  if [ -L "$hook" ] && [ "$(readlink "$hook")" = "$REPO/hooks/pre-commit" ]; then
+    :
+  else
+    rm -f "$hook"
+    mkdir -p "$REPO/.git/hooks"
+    ln -s "$REPO/hooks/pre-commit" "$hook"
+  fi
+  ok "leak-check hook installed"
+}
+
+failed_skills=0
+link_home_files
+link_programs
+deploy_skills
+build_instructions
+install_hook
+
+if [ "$backed_up" -gt 0 ]; then
+  warn "$backed_up existing item(s) were moved to $BACKUP_DIR"
+fi
+if [ "$failed_skills" -gt 0 ]; then
+  fail "install finished, but $failed_skills third-party skill(s) could not be fetched"
+fi
+ok "install complete: $linked new link(s)"

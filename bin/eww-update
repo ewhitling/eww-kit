@@ -1,0 +1,32 @@
+#!/bin/sh
+# eww: place | Pull the latest tools, then install.
+set -eu
+
+case ${1:-} in
+  -h | --help)
+    cat <<'HELP'
+eww update
+
+Pull the latest commit of this repo, then run eww install.
+The pull is fast-forward only. It stops if this checkout has diverged.
+HELP
+    exit 0
+    ;;
+esac
+
+self=$0
+while [ -L "$self" ]; do
+  link=$(readlink "$self")
+  case $link in
+    /*) self=$link ;;
+    *) self=$(dirname "$self")/$link ;;
+  esac
+done
+REPO=$(cd "$(dirname "$self")/.." && pwd -P)
+
+if ! git -C "$REPO" pull --ff-only --quiet; then
+  printf '✗ eww update: could not fast-forward %s\n' "$REPO" >&2
+  exit 1
+fi
+printf '✓ pulled %s\n' "$(git -C "$REPO" log -1 --format='%h %s')"
+exec "$REPO/bin/eww-install"

@@ -1,0 +1,107 @@
+#!/bin/sh
+# eww: place | Check tools, links, instructions, and the leak-check hook.
+# shellcheck disable=SC2088  # "~" appears in messages for the reader. It is not meant to expand.
+set -eu
+
+case ${1:-} in
+  -h | --help)
+    cat <<'HELP'
+eww doctor
+
+Check that this machine is set up. It changes nothing.
+
+  ✓  the check passed
+  !  optional, or worth a look
+  ✗  broken. The exit code is 1 when any check is broken.
+HELP
+    exit 0
+    ;;
+esac
+
+self=$0
+while [ -L "$self" ]; do
+  link=$(readlink "$self")
+  case $link in
+    /*) self=$link ;;
+    *) self=$(dirname "$self")/$link ;;
+  esac
+done
+REPO=$(cd "$(dirname "$self")/.." && pwd -P)
+
+EWW_HOME=${EWW_HOME:-$HOME}
+CONFIG=$EWW_HOME/.config/eww
+MARKER_START='<!-- Built by eww install.'
+
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && [ -z "${EWW_NO_COLOR:-}" ] && [ "${TERM:-}" != dumb ]; then
+  green=$(printf '\033[32m') yellow=$(printf '\033[33m') red=$(printf '\033[31m') reset=$(printf '\033[0m')
+else
+  green='' yellow='' red='' reset=''
+fi
+broken=0
+ok() { printf '%s✓%s %s\n' "$green" "$reset" "$1"; }
+warn() { printf '%s!%s %s\n' "$yellow" "$reset" "$1"; }
+bad() {
+  printf '%s✗%s %s\n' "$red" "$reset" "$1"
+  broken=$((broken + 1))
+}
+
+# Tools every machine needs, then tools that are useful but optional.
+for tool in git zsh uv; do
+  if command -v "$tool" >/dev/null 2>&1; then ok "$tool found"; else bad "$tool is missing"; fi
+done
+for tool in claude pi nvim herdr fzf; do
+  if command -v "$tool" >/dev/null 2>&1; then ok "$tool found"; else warn "$tool is not installed"; fi
+done
+
+case ":$PATH:" in
+  *":$EWW_HOME/.local/bin:"*) ok "~/.local/bin is on the path" ;;
+  *) bad "~/.local/bin is not on the path" ;;
+esac
+
+for program in "$REPO"/bin/eww "$REPO"/bin/eww-*; do
+  [ -e "$program" ] || continue
+  target=$EWW_HOME/.local/bin/${program##*/}
+  if [ -L "$target" ] && [ "$(readlink "$target")" = "$program" ]; then
+    continue
+  fi
+  bad "${program##*/} is not linked into ~/.local/bin (run eww install)"
+done
+[ "$broken" -eq 0 ] && ok "programs linked"
+
+for file in "$EWW_HOME/.claude/CLAUDE.md" "$EWW_HOME/.pi/agent/AGENTS.md"; do
+  short=${file#"$EWW_HOME"/}
+  if [ ! -f "$file" ]; then
+    warn "~/$short does not exist"
+  elif head -n 1 "$file" | grep -q "^$MARKER_START"; then
+    ok "~/$short was built by eww"
+  else
+    warn "~/$short was not built by eww"
+  fi
+done
+
+suffix_count=0
+for suffix in "$CONFIG"/suffixes/*.md; do
+  if [ -f "$suffix" ]; then
+    suffix_count=$((suffix_count + 1))
+  elif [ -L "$suffix" ]; then
+    bad "suffix ${suffix##*/} points at a missing file"
+  fi
+done
+ok "suffix files: $suffix_count"
+
+if [ -f "$CONFIG/denylist.txt" ]; then
+  hook=$REPO/.git/hooks/pre-commit
+  if [ -L "$hook" ] && [ "$(readlink "$hook")" = "$REPO/hooks/pre-commit" ]; then
+    ok "leak-check hook installed"
+  else
+    bad "leak-check hook is not installed (run eww install)"
+  fi
+  if command -v gitleaks >/dev/null 2>&1; then ok "gitleaks found"; else bad "gitleaks is missing, so commits will be refused"; fi
+else
+  ok "no denylist on this machine, so it is treated as pull-only"
+fi
+
+if [ "$broken" -gt 0 ]; then
+  printf '\n%s check(s) broken\n' "$broken"
+  exit 1
+fi
