@@ -73,7 +73,7 @@ This repo is public. Records must not contain personal details, employer names, 
 ## ADR 7: Teach is three small commands that write notes
 
 - Date: 2026-11-12
-- Status: Accepted
+- Status: Accepted. Refined by ADR 15 and ADR 16. On 2026-11-13 the owner chose to run `eww daily` and `eww weekly` by hand, so neither has a schedule.
 
 **Context.** The goal is to resurface existing notes daily, learn new concepts on demand, and see rising ideas before aggregators cover them.
 
