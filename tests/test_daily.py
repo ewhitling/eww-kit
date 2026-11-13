@@ -71,6 +71,17 @@ def test_is_excluded_reads_inline_and_front_matter_tags() -> None:
     assert not daily.is_excluded("plain text")
 
 
+def test_machine_written_definitions_are_shown_unless_marked() -> None:
+    assert daily.is_excluded("# T\n#llm-generated\n", "book")
+    assert not daily.is_excluded("# T\n#llm-generated\n", "definition")
+    assert daily.is_excluded("# T\n#llm-generated #no-resurface\n", "definition")
+
+
+def test_a_definition_note_offers_its_mechanism_line() -> None:
+    note = f"---\ncreated: 2026-11-13\n---\n# Term\n#llm-generated\n\n**Mechanism.** {LONG}\n\nA definition.\n\n## Diagram\n"
+    assert daily.passages_in(note) == [f"**Mechanism.** {LONG}"]
+
+
 def test_display_title_drops_a_clash_ending() -> None:
     assert daily.display_title("Sikhism-2") == "Sikhism"
     assert daily.display_title("A|B [c]") == "A-B (c)"

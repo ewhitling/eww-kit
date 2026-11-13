@@ -14,7 +14,7 @@ vault.
 
 A note is left out when it:
   is tagged #no-resurface
-  is tagged #llm-generated
+  is tagged #llm-generated, unless it is a definition in collections/definition
   sits in collections/ttrpg or collections/game
   was shown in the last 60 days (read from past day-notes)
 
@@ -35,6 +35,7 @@ from pathlib import Path
 
 SECTION_HEADING = "## Resurfaced"
 SKIPPED_KINDS = frozenset({"ttrpg", "game"})
+KINDS_SHOWN_WHEN_MACHINE_WRITTEN = frozenset({"definition"})
 PASSAGES_PER_DAY = 3
 RECENT_DAYS = 60
 EXCERPT_LIMIT = 300
@@ -67,11 +68,20 @@ def vault_path(home: Path) -> Path | None:
     return Path(first_line)
 
 
-def is_excluded(text: str) -> bool:
-    """True for a note the owner or an AI marked as not for resurfacing."""
-    return "#no-resurface" in text or "#llm-generated" in text or bool(
-        re.search(r"^\s*-\s*(no-resurface|llm-generated)\s*$", text, re.M)
-    )
+def has_tag(text: str, tag: str) -> bool:
+    """True when the note carries the tag, inline or in its front matter list."""
+    return f"#{tag}" in text or bool(re.search(rf"^\s*-\s*{re.escape(tag)}\s*$", text, re.M))
+
+
+def is_excluded(text: str, kind: str = "") -> bool:
+    """True for a note that must not be resurfaced.
+
+    The owner's #no-resurface always applies. Machine-written notes are left out,
+    except definitions: revisiting a definition is how it sticks.
+    """
+    if has_tag(text, "no-resurface"):
+        return True
+    return has_tag(text, "llm-generated") and kind not in KINDS_SHOWN_WHEN_MACHINE_WRITTEN
 
 
 def shorten(text: str, limit: int = EXCERPT_LIMIT) -> str:
@@ -134,7 +144,7 @@ def first_paragraph(body: str) -> list[str]:
     """The first plain paragraph: not a heading, list item, table, tag line, or embed."""
     for block in re.split(r"\n\s*\n", body):
         lines = [line.strip() for line in block.splitlines() if line.strip()]
-        if not lines or any(line[0] in "#-*|>!" or re.match(r"\d+\. ", line) for line in lines):
+        if not lines or any(line[0] in "#|>!" or re.match(r"([-*+]|\d+\.) ", line) for line in lines):
             continue
         paragraph = " ".join(lines)
         if _usable(paragraph):
@@ -164,7 +174,7 @@ def candidates(vault: Path) -> dict[str, tuple[str, str, list[str]]]:
         if not kind or kind in SKIPPED_KINDS:
             continue
         text = path.read_text(errors="ignore")
-        if is_excluded(text):
+        if is_excluded(text, kind):
             continue
         passages = passages_in(text)
         if passages:

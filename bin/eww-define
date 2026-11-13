@@ -1,0 +1,224 @@
+#!/usr/bin/env -S uv run --quiet --script
+# eww: capture | Write a definition note for a term, with a mechanism and a diagram.
+# /// script
+# requires-python = ">=3.10"
+# dependencies = []
+# ///
+"""eww define [--dry-run] TERM
+
+Write a definition note for TERM into the primary vault, at
+collections/definition/TERM.md. The note holds a one-line mechanism, a plain
+definition, one Mermaid diagram, and two notes on practice.
+
+The text comes from one headless agent call with no tools and no web access.
+The reply is checked before anything is written. An existing note is never
+replaced. When the model does not know the term, nothing is written.
+
+  --dry-run   print the note without writing it
+
+Settings:
+  EWW_DEFINE_COMMAND   the agent command to run. It reads the prompt on
+                       standard input and prints the reply. The default is
+                       claude in print mode with every tool turned off.
+"""
+from __future__ import annotations
+
+import datetime
+import os
+import re
+import shlex
+import subprocess
+import sys
+from pathlib import Path
+
+DEFAULT_COMMAND = [
+    "claude", "--print", "--tools", "", "--strict-mcp-config",
+    "--disable-slash-commands", "--no-session-persistence",
+]
+MOST_DIAGRAM_NODES = 8
+LONGEST_DEFINITION_WORDS = 110
+AGENT_TIMEOUT_SECONDS = 180
+
+PROMPT = """Define the term below for a reader who is smart but new to it.
+
+Reply with exactly this shape and nothing else. No title, no preamble, no closing remark.
+
+**Mechanism.** One or two sentences that say what acts on what, and what changes as a result.
+
+One paragraph of plain definition, under 80 words. Short sentences. No idioms. Never use an em-dash.
+
+## Diagram
+
+```mermaid
+flowchart TD
+  (a diagram of the mechanism above: at most 6 nodes, node labels of 1 to 3 words, no styling)
+```
+
+## In practice
+
+- One concrete example.
+- One common confusion, and how to tell the two things apart.
+
+Rules:
+- The diagram must show the same mechanism the first line states.
+- If the term has several meanings, define the one most used in data science, software, or systems thinking, and name the field in the definition.
+- If you do not know the term, or it is not a real term, reply with one line only: UNKNOWN: followed by a short reason.
+
+Term: {term}
+"""
+
+
+class RejectedReply(Exception):
+    """The agent's reply does not have the required shape."""
+
+
+class UnknownTerm(Exception):
+    """The agent said it does not know the term."""
+
+
+def vault_path(home: Path) -> Path | None:
+    """The primary vault: the first line of ~/.config/eww/vault, or None when the file is absent."""
+    pointer = home / ".config" / "eww" / "vault"
+    if not pointer.is_file():
+        return None
+    lines = [line.strip() for line in pointer.read_text().splitlines() if line.strip()]
+    if not lines:
+        return None
+    return home / lines[0][2:] if lines[0].startswith("~/") else Path(lines[0])
+
+
+def note_title(term: str) -> str:
+    """The term as a note title: trimmed, with a capital first letter and no path characters."""
+    title = " ".join(term.split())
+    title = re.sub(r'[\\/:*?"<>|#^\[\]]', "", title).strip(" .")
+    return title[:1].upper() + title[1:]
+
+
+def existing_note(folder: Path, title: str) -> Path | None:
+    """A note in the folder with this title, ignoring case, or None."""
+    if not folder.is_dir():
+        return None
+    for path in folder.glob("*.md"):
+        if path.stem.lower() == title.lower():
+            return path
+    return None
+
+
+def diagram_nodes(diagram: str) -> set[str]:
+    """Ids of the nodes a Mermaid flowchart declares with a label, such as A[Label]."""
+    return set(re.findall(r"\b([A-Za-z_][\w]*)\s*(?:\[|\(|\{)", diagram))
+
+
+def checked_body(reply: str) -> str:
+    """The reply, cleaned and confirmed to have the required shape. Raises when it does not."""
+    body = reply.strip()
+    unknown = re.match(r"UNKNOWN:\s*(.*)", body)
+    if unknown:
+        raise UnknownTerm(unknown.group(1).strip() or "no reason given")
+    if not body.startswith("**Mechanism.**"):
+        raise RejectedReply("the reply does not start with the mechanism line")
+    if "—" in body:
+        body = body.replace(" — ", ", ").replace("—", ", ")
+    diagram = re.search(r"^## Diagram\s*\n+```mermaid\n(.*?)\n```", body, re.S | re.M)
+    if not diagram:
+        raise RejectedReply("the reply has no Mermaid diagram under a Diagram heading")
+    if not diagram.group(1).lstrip().startswith("flowchart TD"):
+        raise RejectedReply("the diagram is not a top-down flowchart")
+    nodes = diagram_nodes(diagram.group(1))
+    if not nodes:
+        raise RejectedReply("the diagram declares no labelled nodes")
+    if len(nodes) > MOST_DIAGRAM_NODES:
+        raise RejectedReply(f"the diagram has {len(nodes)} nodes, more than {MOST_DIAGRAM_NODES}")
+    practice = re.search(r"^## In practice\s*\n(.*)\Z", body, re.S | re.M)
+    if not practice or not re.search(r"^- \S", practice.group(1), re.M):
+        raise RejectedReply("the reply has no list under an In practice heading")
+    prose = body.split("## Diagram", 1)[0]
+    paragraphs = [block for block in re.split(r"\n\s*\n", prose.strip()) if block.strip()]
+    if len(paragraphs) < 2:
+        raise RejectedReply("the reply has no definition paragraph after the mechanism line")
+    if len(" ".join(paragraphs[1:]).split()) > LONGEST_DEFINITION_WORDS:
+        raise RejectedReply("the definition is too long")
+    return body
+
+
+def render_note(title: str, body: str, today: datetime.date) -> str:
+    """The full note: front matter, title, the machine-written mark, then the checked body."""
+    return f"---\ncreated: {today:%Y-%m-%d}\n---\n# {title}\n#llm-generated\n\n{body}\n"
+
+
+def agent_command() -> list[str]:
+    custom = os.environ.get("EWW_DEFINE_COMMAND")
+    return shlex.split(custom) if custom else DEFAULT_COMMAND
+
+
+def ask_agent(term: str, command: list[str]) -> str:
+    """Run the agent once with the prompt on standard input, and return its reply."""
+    result = subprocess.run(
+        command, input=PROMPT.format(term=term), capture_output=True, text=True, timeout=AGENT_TIMEOUT_SECONDS,
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip().splitlines()
+        raise RuntimeError(detail[-1] if detail else f"exit code {result.returncode}")
+    return result.stdout
+
+
+def main(argv: list[str]) -> int:
+    if not argv or argv[0] in ("-h", "--help"):
+        print(__doc__.strip())
+        return 0 if argv else 2
+    dry_run = "--dry-run" in argv
+    words = [argument for argument in argv if argument != "--dry-run"]
+    unknown_options = [word for word in words if word.startswith("-")]
+    if unknown_options:
+        print(f'✗ eww define: unknown option "{unknown_options[0]}"', file=sys.stderr)
+        return 2
+    title = note_title(" ".join(words))
+    if not title:
+        print("✗ eww define: give a term to define", file=sys.stderr)
+        return 2
+
+    vault = vault_path(Path(os.environ.get("EWW_HOME") or Path.home()))
+    if vault is None or not vault.is_dir():
+        print("✗ eww define: no vault on this machine: ~/.config/eww/vault is missing or wrong", file=sys.stderr)
+        return 1
+    folder = vault / "collections" / "definition"
+    existing = existing_note(folder, title)
+    if existing:
+        print(f"✓ a note already exists: {existing.relative_to(vault).as_posix()}")
+        return 0
+
+    command = agent_command()
+    print(f"→ asking {command[0]} to define {title}", file=sys.stderr)
+    try:
+        body = checked_body(ask_agent(title, command))
+    except UnknownTerm as error:
+        print(f"! eww define: the model does not know this term: {error}", file=sys.stderr)
+        return 1
+    except RejectedReply as error:
+        print(f"✗ eww define: the reply was rejected: {error}. Nothing was written. Run it again.", file=sys.stderr)
+        return 1
+    except FileNotFoundError:
+        print(f"✗ eww define: {command[0]} is not installed", file=sys.stderr)
+        return 1
+    except subprocess.TimeoutExpired:
+        print(f"✗ eww define: {command[0]} did not answer in {AGENT_TIMEOUT_SECONDS} seconds", file=sys.stderr)
+        return 1
+    except RuntimeError as error:
+        print(f"✗ eww define: {command[0]} failed: {error}", file=sys.stderr)
+        return 1
+
+    note = render_note(title, body, datetime.date.today())
+    if dry_run:
+        print(note, end="")
+        return 0
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / f"{title}.md"
+    # "x" refuses to write over a file that appeared since the check above.
+    with path.open("x") as handle:
+        handle.write(note)
+    print(f"✓ wrote {path.relative_to(vault).as_posix()}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
