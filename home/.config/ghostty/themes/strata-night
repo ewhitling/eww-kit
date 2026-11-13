@@ -1,0 +1,23 @@
+# Strata night for Ghostty. Maintained from tokens/tokens.json.
+# Copy to ~/.config/ghostty/themes/strata-night
+background = #161619
+foreground = #D4D4D8
+cursor-color = #8AB5D6
+selection-background = #293139
+selection-foreground = #D4D4D8
+palette = 0=#141826
+palette = 1=#F2768F
+palette = 2=#4FC1B0
+palette = 3=#F2894F
+palette = 4=#8AB5D6
+palette = 5=#A98BDB
+palette = 6=#4FC3F7
+palette = 7=#ABABB2
+palette = 8=#777780
+palette = 9=#F796A9
+palette = 10=#7DD6C8
+palette = 11=#F6A97C
+palette = 12=#A6CCF9
+palette = 13=#C2AAE6
+palette = 14=#86D6FA
+palette = 15=#D4D4D8

@@ -1,0 +1,11 @@
+# Ghostty settings. Linked into ~/.config/ghostty by eww install.
+# Reload inside Ghostty with cmd+shift+comma.
+
+# Strata, following the system appearance. The theme files sit in themes/.
+theme = light:strata-paper,dark:strata-night
+
+# A steady block cursor. Shell integration would otherwise switch it to a
+# blinking bar at the prompt, so its cursor feature is turned off.
+cursor-style = block
+cursor-style-blink = false
+shell-integration-features = no-cursor

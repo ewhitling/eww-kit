@@ -1,0 +1,23 @@
+# Strata paper for Ghostty. Maintained from tokens/tokens.json.
+# Copy to ~/.config/ghostty/themes/strata-paper
+background = #F4EEE3
+foreground = #14203A
+cursor-color = #1F5DAA
+selection-background = #DCE7F5
+selection-foreground = #14203A
+palette = 0=#14203A
+palette = 1=#A8274A
+palette = 2=#0D7064
+palette = 3=#A84012
+palette = 4=#1F5DAA
+palette = 5=#7A4FAE
+palette = 6=#0B6E8E
+palette = 7=#4D576C
+palette = 8=#8C826F
+palette = 9=#C2365E
+palette = 10=#138A7B
+palette = 11=#BF5524
+palette = 12=#2F6FC4
+palette = 13=#9A6BC4
+palette = 14=#1688AD
+palette = 15=#14203A
