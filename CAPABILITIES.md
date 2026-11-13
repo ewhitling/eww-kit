@@ -6,15 +6,18 @@ Decisions behind this list are in `ADR.md`.
 
 - **Notes cutover.** Applied on 2026-11-12. The Obsidian vault is the record. Awaiting one day of real use.
 - **Launcher.** `eww` prints the map of every `eww-<verb>` program it finds and runs them. Aliases are symlinks.
+- **Private files from the vault.** A machine with `~/.config/eww/vault` gets private home files and suffixes from the vault's `_meta/eww/` folder.
+- **Shared settings.** zsh settings, the starship prompt, the nvim config, and a global git ignore file are in `home/`.
+- **Skills.** 17 own skills in `skills/` and 33 pinned third-party skills in `skills.lock`.
 - **`eww install`.** Links `home/` files and programs, deploys own and pinned third-party skills to Claude and Pi, builds instructions from the base plus local suffix files, installs the leak-check hook where a denylist exists. Existing files are backed up, never deleted.
 - **`eww update`, `eww doctor`, `setup.sh`.**
 - **Leak-check commit hook.** gitleaks plus a private denylist. Fails closed.
 
-Tested with `make test` (59 checks in a temporary home folder) and `make lint`. Not yet tested: Ubuntu, a real install on a Mac, `setup.sh` end to end.
+Tested with `make test` (74 checks in a temporary home folder), `make lint`, and a trial install into a temporary home using the real vault. Not yet tested: Ubuntu, a real install on a Mac, `setup.sh` end to end.
 
 ## In flight
 
-2. **Repo, setup script, launcher.** The mechanism is built. Remaining: review and copy in the real content (`instructions/base.md`, `home/` files, skills, `skills.lock`), test on a fresh VPS, then install on a Mac. After that: `h` and `w`, `context`.
+2. **Repo, setup script, launcher.** Mechanism and content are in place. Remaining: test on a fresh VPS, create the public GitHub repo and push, install on a Mac (which retires the old tools), then `h` and `w`, and `context`.
 
 ## Next
 

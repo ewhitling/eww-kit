@@ -113,3 +113,19 @@ This repo is public. Records must not contain personal details, employer names, 
 **Decision.** Build in this order: notes cutover, repo with setup script and launcher, design tokens, `daily`, `weekly`, Lab session. A step is done after one day of real use with no interface change. The old tool repos are archived after the first new install works.
 
 **Consequences.** Each step is usable alone. A working system stays in place during the build.
+
+## ADR 11: Private files come from the notes vault
+
+- Date: 2026-11-12
+- Status: Accepted. Extends ADR 3, ADR 4, and ADR 5.
+
+**Context.** A public repo cannot hold git identity, machine paths, or personal profile text. Leaving those files on each machine left them unmanaged and unsynced, which was rejected. The other option was a private repo moved by git bundles. That brings back a manual transport step for every update and a credential on every server. The notes vault already reaches every machine the owner chooses.
+
+**Decision.** The repo stays public. Private content lives in the vault under `_meta/eww/`. A machine opts in by writing the vault path into `~/.config/eww/vault`. When that file exists, `eww install`:
+
+- links every file under the vault's `_meta/eww/home/` into the home folder. A private file wins over a repo file at the same path.
+- links the vault's suffix files into `~/.config/eww/suffixes/`.
+
+`~/.zshrc` is not linked, because installers append machine-specific lines to it. Install adds one line to it that loads `~/.config/eww/eww.zsh`. That file loads `~/.config/eww/private.zsh` when the vault provides one.
+
+**Consequences.** Every managed file has one source: the repo for shared files, the vault for private ones. A machine with no `~/.config/eww/vault` file gets only public content, which suits a pull-only machine. Private files depend on the vault being present before install runs. A program that replaces its config file, in place of writing through the link, will break that link until the next install.

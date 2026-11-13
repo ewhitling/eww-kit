@@ -68,6 +68,19 @@ for program in "$REPO"/bin/eww "$REPO"/bin/eww-*; do
 done
 [ "$broken" -eq 0 ] && ok "programs linked"
 
+if [ -f "$REPO/home/.config/eww/eww.zsh" ]; then
+  if grep -q '\.config/eww/eww\.zsh' "$EWW_HOME/.zshrc" 2>/dev/null; then
+    ok "~/.zshrc loads the shared shell settings"
+  else
+    bad "~/.zshrc does not load the shared shell settings (run eww install)"
+  fi
+fi
+if [ -f "$CONFIG/vault" ]; then
+  ok "vault configured, so private files and suffixes come from it"
+else
+  warn "no ~/.config/eww/vault, so this machine gets no private files"
+fi
+
 for file in "$EWW_HOME/.claude/CLAUDE.md" "$EWW_HOME/.pi/agent/AGENTS.md"; do
   short=${file#"$EWW_HOME"/}
   if [ ! -f "$file" ]; then

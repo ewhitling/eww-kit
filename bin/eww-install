@@ -13,13 +13,19 @@ eww install
 
 Install everything from this repo into the home folder. Safe to run again.
 
-  1. Link files from home/ into ~
+  1. Link files from home/ into ~, and add one line to ~/.zshrc that loads
+     the shared shell settings
   2. Link the eww programs into ~/.local/bin
   3. Link skills into the Claude and Pi skill folders
      (third-party skills are fetched at the commits pinned in skills.lock)
   4. Build agent instructions from instructions/base.md
      plus every file in ~/.config/eww/suffixes/
   5. Install the leak-check commit hook, where ~/.config/eww/denylist.txt exists
+
+If ~/.config/eww/vault holds the path of the notes vault, private content
+comes from the vault's _meta/eww/ folder:
+  - files under home/ there are linked into ~ and win over this repo's files
+  - suffix files there are linked into ~/.config/eww/suffixes/
 
 An existing file that eww did not create is moved to
 ~/.local/state/eww/backup/<time>/ before it is replaced.
@@ -88,20 +94,68 @@ link() {
   linked=$((linked + 1))
 }
 
-# Step 1: files in home/ are linked to the same path under the home folder.
-link_home_files() {
-  [ -d "$REPO/home" ] || return 0
+# Link every file under one folder to the same path under the home folder.
+# A file is skipped when the folder named by the third argument has the same path.
+link_tree() {
+  tree=$1
+  label=$2
+  skip_if_in=${3:-}
+  [ -d "$tree" ] || return 0
   count=0
   # The file list is written to a temporary file so the loop runs in this shell.
   list=$(mktemp)
-  (cd "$REPO/home" && find . -type f ! -name .gitkeep ! -name .DS_Store) >"$list"
+  (cd "$tree" && find . -type f ! -name .gitkeep ! -name .DS_Store) >"$list"
   while IFS= read -r relative; do
     relative=${relative#./}
-    link "$REPO/home/$relative" "$EWW_HOME/$relative"
+    if [ -n "$skip_if_in" ] && [ -f "$skip_if_in/$relative" ]; then
+      continue
+    fi
+    link "$tree/$relative" "$EWW_HOME/$relative"
     count=$((count + 1))
   done <"$list"
   rm -f "$list"
-  ok "home files linked: $count"
+  ok "$label linked: $count"
+}
+
+# The vault path for this machine, or nothing when ~/.config/eww/vault is absent.
+vault_path() {
+  [ -f "$CONFIG/vault" ] || return 0
+  vault=$(head -n 1 "$CONFIG/vault")
+  # shellcheck disable=SC2088  # a literal "~/" read from the file is expanded here by hand
+  case $vault in
+    "~/"*) vault=$EWW_HOME/${vault#"~/"} ;;
+  esac
+  printf '%s\n' "$vault"
+}
+
+# Step 1: shared files from home/ in this repo, and private files from the
+# vault's _meta/eww/home/ folder. A private file wins over a shared one.
+link_home_files() {
+  private_home=''
+  if [ -n "$VAULT" ] && [ -d "$VAULT/_meta/eww/home" ]; then
+    private_home=$VAULT/_meta/eww/home
+    link_tree "$private_home" "private home files from the vault"
+  fi
+  link_tree "$REPO/home" "home files" "$private_home"
+}
+
+# zsh loads the shared settings through one line in ~/.zshrc. The file itself
+# is not linked, because installers append machine-specific lines to it.
+ensure_zshrc_line() {
+  [ -f "$REPO/home/.config/eww/eww.zsh" ] || return 0
+  zshrc=$EWW_HOME/.zshrc
+  if [ -f "$zshrc" ] && grep -q '\.config/eww/eww\.zsh' "$zshrc"; then
+    return 0
+  fi
+  needs_blank_line=''
+  [ -s "$zshrc" ] && needs_blank_line=yes
+  {
+    if [ -n "$needs_blank_line" ]; then printf '\n'; fi
+    printf '# Shared shell settings. Added by eww install.\n'
+    # shellcheck disable=SC2016  # written literally; zsh expands $HOME when it reads the file
+    printf '[ -f "$HOME/.config/eww/eww.zsh" ] && source "$HOME/.config/eww/eww.zsh"\n'
+  } >>"$zshrc"
+  ok "added one line to ~/.zshrc that loads the shared shell settings"
 }
 
 # Step 2: every eww program becomes available on the path.
@@ -113,6 +167,29 @@ link_programs() {
     count=$((count + 1))
   done
   ok "programs linked into ~/.local/bin: $count"
+}
+
+# Optional: ~/.config/eww/vault holds the path of the notes vault on this machine.
+# When it exists, every suffix file in the vault's _meta/eww/ folder is linked
+# into the suffix folder. A machine with no such file gets no vault suffixes.
+link_vault_suffixes() {
+  [ -f "$CONFIG/vault" ] || return 0
+  if [ ! -d "$VAULT/_meta/eww" ]; then
+    warn "no _meta/eww folder in the vault named by ~/.config/eww/vault"
+    return 0
+  fi
+  count=0
+  for suffix in "$VAULT"/_meta/eww/*.md; do
+    [ -f "$suffix" ] || continue
+    link "$suffix" "$CONFIG/suffixes/${suffix##*/}"
+    count=$((count + 1))
+  done
+  for suffix in "$VAULT"/_meta/eww/skills/*.md; do
+    [ -f "$suffix" ] || continue
+    link "$suffix" "$CONFIG/suffixes/skills/${suffix##*/}"
+    count=$((count + 1))
+  done
+  ok "vault suffix files linked: $count"
 }
 
 # Fetch the repo that holds a third-party skill, at its pinned commit. Prints the skill folder.
@@ -263,8 +340,11 @@ install_hook() {
 }
 
 failed_skills=0
+VAULT=$(vault_path)
 link_home_files
+ensure_zshrc_line
 link_programs
+link_vault_suffixes
 deploy_skills
 build_instructions
 install_hook

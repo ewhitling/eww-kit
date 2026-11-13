@@ -1,0 +1,66 @@
+# Nord palette. It matches the nvim theme.
+# Requires a Nerd Font.
+
+format = """
+$directory\
+$git_branch\
+$git_status\
+$python\
+$nodejs\
+$cmd_duration\
+$jobs\
+$line_break\
+$character"""
+
+palette = "nord"
+
+[palettes.nord]
+polar0  = "#2e3440"
+polar1  = "#3b4252"
+polar2  = "#434c5e"
+polar3  = "#4c566a"
+snow0   = "#d8dee9"
+snow1   = "#e5e9f0"
+snow2   = "#eceff4"
+frost0  = "#8fbcbb"
+frost1  = "#88c0d0"
+frost2  = "#81a1c1"
+frost3  = "#5e81ac"
+red     = "#bf616a"
+orange  = "#d08770"
+yellow  = "#ebcb8b"
+green   = "#a3be8c"
+purple  = "#b48ead"
+
+[directory]
+style = "frost1 bold"
+truncation_length = 3
+truncate_to_repo = true
+
+[git_branch]
+symbol = " "
+style = "frost2"
+format = "[$symbol$branch]($style) "
+
+[git_status]
+style = "yellow"
+format = '([$all_status$ahead_behind]($style)) '
+
+[python]
+disabled = true
+
+[nodejs]
+disabled = true
+
+[cmd_duration]
+min_time = 2_000
+style = "polar3"
+format = '[took $duration]($style) '
+
+[jobs]
+style = "purple"
+format = "[$symbol$number]($style) "
+
+[character]
+success_symbol = "[❯](frost1 bold)"
+error_symbol   = "[❯](red bold)"

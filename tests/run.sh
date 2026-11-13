@@ -32,6 +32,8 @@ COPY=$(cd "$COPY" && pwd -P)
 mkdir -p "$COPY/home/.config/demo" "$COPY/skills/own-skill" "$COPY/instructions"
 printf 'demo setting\n' >"$COPY/home/.config/demo/settings"
 printf 'rc file\n' >"$COPY/home/.demorc"
+mkdir -p "$COPY/home/.config/eww"
+printf '# test shell settings\n' >"$COPY/home/.config/eww/eww.zsh"
 printf '# Own skill\n' >"$COPY/skills/own-skill/SKILL.md"
 printf '# Base instructions\n' >"$COPY/instructions/base.md"
 ln -s eww-doctor "$COPY/bin/eww-alias"
@@ -97,6 +99,8 @@ check "second third-party skill from the same source is deployed" grep -q 'other
 check "skills from one source and commit share one clone" test "$(find "$EWW_HOME/.local/share/eww/third-party" -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 1
 check "hook is skipped with no denylist" sh -c "! test -e '$COPY/.git/hooks/pre-commit'"
 
+check "a missing ~/.zshrc is created with the loading line" grep -q '.config/eww/eww.zsh' "$EWW_HOME/.zshrc"
+
 # --- install again ---------------------------------------------------------
 backups_before=$(find "$EWW_HOME/.local/state/eww/backup" -type f | wc -l)
 second_run=$("$COPY/bin/eww-install" 2>&1)
@@ -109,6 +113,42 @@ printf '## Personal changed\n' >"$EWW_HOME/.config/eww/suffixes/10-personal.md"
 "$COPY/bin/eww-install" >/dev/null 2>&1
 check "changed suffix is rebuilt" grep -q 'Personal changed' "$EWW_HOME/.claude/CLAUDE.md"
 check "rebuild makes no backup" test "$backups_before" -eq "$(find "$EWW_HOME/.local/state/eww/backup" -type f | wc -l)"
+
+# A vault path file links the vault's suffix files, for instructions and for skills.
+mkdir -p "$WORK/vault/_meta/eww/skills"
+printf '## From the vault\n' >"$WORK/vault/_meta/eww/40-vault.md"
+printf 'Vault skill suffix\n' >"$WORK/vault/_meta/eww/skills/their-skill.md"
+printf '%s\n' "$WORK/vault" >"$EWW_HOME/.config/eww/vault"
+"$COPY/bin/eww-install" >/dev/null 2>&1
+check "vault suffix is linked" is_link_to "$EWW_HOME/.config/eww/suffixes/40-vault.md" "$WORK/vault/_meta/eww/40-vault.md"
+check "vault suffix reaches the instructions" grep -q 'From the vault' "$EWW_HOME/.claude/CLAUDE.md"
+check "vault skill suffix reaches a third-party skill" grep -q 'Vault skill suffix' "$EWW_HOME/.claude/skills/their-skill/SKILL.md"
+# Private home files in the vault are linked, and win over a repo file at the same path.
+mkdir -p "$WORK/vault/_meta/eww/home/.config/demo"
+printf 'private git settings\n' >"$WORK/vault/_meta/eww/home/.privaterc"
+printf 'private demo setting\n' >"$WORK/vault/_meta/eww/home/.config/demo/settings"
+"$COPY/bin/eww-install" >/dev/null 2>&1
+check "private home file from the vault is linked" is_link_to "$EWW_HOME/.privaterc" "$WORK/vault/_meta/eww/home/.privaterc"
+check "private file wins over the repo file" grep -q 'private demo setting' "$EWW_HOME/.config/demo/settings"
+check "repo files without a private twin stay linked" is_link_to "$EWW_HOME/.demorc" "$COPY/home/.demorc"
+links_before=$(find "$EWW_HOME/.local/state/eww/backup" | wc -l)
+"$COPY/bin/eww-install" >/dev/null 2>&1
+check "private override is stable across runs" test "$links_before" -eq "$(find "$EWW_HOME/.local/state/eww/backup" | wc -l)"
+rm -rf "$WORK/vault/_meta/eww/home"
+rm "$EWW_HOME/.privaterc" "$EWW_HOME/.config/demo/settings"
+"$COPY/bin/eww-install" >/dev/null 2>&1
+check "repo file returns when the private twin is removed" is_link_to "$EWW_HOME/.config/demo/settings" "$COPY/home/.config/demo/settings"
+
+# The loading line is added once, and an existing ~/.zshrc keeps its content.
+check "loading line appears once after many runs" test "$(grep -c '.config/eww/eww.zsh' "$EWW_HOME/.zshrc")" -eq 1
+printf 'export KEEP_ME=1\n' >"$EWW_HOME/.zshrc"
+"$COPY/bin/eww-install" >/dev/null 2>&1
+check "existing ~/.zshrc content is kept" grep -q 'KEEP_ME' "$EWW_HOME/.zshrc"
+check "loading line is appended to an existing ~/.zshrc" grep -q '.config/eww/eww.zsh' "$EWW_HOME/.zshrc"
+
+printf '%s\n' "$WORK/no-such-vault" >"$EWW_HOME/.config/eww/vault"
+check "a missing vault does not stop install" "$COPY/bin/eww-install"
+rm "$EWW_HOME/.config/eww/vault"
 
 # A skill removed from the repo loses its link.
 rm "$EWW_HOME/.config/eww/suffixes/skills/own-skill.md"

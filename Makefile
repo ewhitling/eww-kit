@@ -9,3 +9,4 @@ test:
 
 lint:
 	@shellcheck setup.sh bin/eww bin/eww-install bin/eww-update bin/eww-doctor hooks/pre-commit tests/run.sh
+	@zsh -n home/.config/eww/eww.zsh
