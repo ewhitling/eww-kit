@@ -18,7 +18,7 @@ keybind = ctrl+alt+shift+super+escape=text:\x1b
 # A slightly translucent window, with the content behind it blurred so text
 # stays readable. A change here needs a full restart of Ghostty on macOS.
 # Native fullscreen is always opaque.
-background-opacity = 0.8
+background-opacity = 0.85
 background-blur = true
 
 # Text size in points. Ghostty's own default is 13.
