@@ -1,4 +1,4 @@
-# Strata paper theme for matplotlib. Maintained from tokens/tokens.json.
+# Strata paper theme for matplotlib. Generated from tokens/tokens.json by tools/themes/build.py. Do not edit.
 # Register fonts first: strata_viz.use("paper").
 figure.facecolor: F4EEE3
 figure.edgecolor: F4EEE3

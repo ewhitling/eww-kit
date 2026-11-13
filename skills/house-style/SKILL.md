@@ -75,8 +75,8 @@ Both themes must remain readable.
 Hood is Strata's Obsidian adapter over pinned Atom. Its self-contained CSS maps
 these tokens into Obsidian roles. Night uses surface for the editor and ground for
 the sidebar; Paper keeps its existing mapping. Hood owns editor behavior, 1.7 line height,
-mobile geometry, and the optional cursor. Hood's CSS is not bundled with this skill.
-Reconcile it by hand when shared tokens change.
+mobile geometry, and the optional cursor. Hood lives in the eww repo at `obsidian/plugins/hood/`.
+`make themes` writes its palette from these tokens, and `eww install` copies it into the vault.
 
 Standalone renderer output embeds token CSS and uses local font fallbacks. It does not fetch fonts.
 The bundled font CSS requires its adjacent font files; do not paste its relative URLs into standalone output.
@@ -95,8 +95,8 @@ If uv or the renderer is unavailable, report the blocker rather than silently ha
 
 ## Change the style
 
-Edit `tokens/tokens.json` first. Reconcile affected exports with it.
-The historical generator is in git history, not an active build command.
+Edit `tokens/tokens.json`, then run `make themes` in the eww repo. It rewrites every export.
+Do not edit an export by hand. `make test` fails when an export differs from the tokens.
 The renderer reads `assets/tokens.css` at render time; it has no independent palette.
 Keep the template token block and font CSS token block identical to the shared CSS.
 

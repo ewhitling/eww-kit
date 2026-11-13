@@ -1,4 +1,4 @@
-# Strata paper for Ghostty. Maintained from tokens/tokens.json.
+# Strata paper for Ghostty. Generated from tokens/tokens.json by tools/themes/build.py. Do not edit.
 # Copy to ~/.config/ghostty/themes/strata-paper
 background = #F4EEE3
 foreground = #14203A

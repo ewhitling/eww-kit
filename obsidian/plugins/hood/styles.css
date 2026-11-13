@@ -1,0 +1,261 @@
+/* Hood: the Obsidian adapter for Strata, over pinned Atom.
+ * The palette between the palette:start and palette:end markers is generated
+ * from the house-style tokens by tools/themes/build.py. Do not edit it by hand.
+ * Everything else in this file is written by hand.
+ * Self-contained at runtime. Hood owns workspace, mobile, and cursor behavior.
+ */
+
+/* 1. Hood-inspired Strata Night: editor on surface, sidebar on ground.
+ * Paper uses ground for the editor and surface for the sidebar. */
+/* palette:start */
+body.theme-dark {
+  --hood-page: #19191D;
+  --hood-sidebar: #161619;
+  --hood-panel: #222226;
+  --hood-text: #D4D4D8;
+  --hood-muted: #ABABB2;
+  --hood-faint: #929298;
+  --hood-blue: #8AB5D6;
+  --hood-selection: #293139;
+  --hood-tab-active: #292E35;
+  --hood-hover: #292E35;
+  --hood-code: #292E35;
+  --hood-line: #35353C;
+  --hood-line-strong: #777780;
+  --hood-on-action: #07080D;
+  --hood-ok: #4FC1B0;
+  --hood-warn: #F2894F;
+  --hood-fail: #F2768F;
+  --hood-ok-soft: #0F2A27;
+  --hood-warn-soft: #2A1810;
+  --hood-fail-soft: #2B1119;
+}
+
+body.theme-light {
+  --hood-page: #F4EEE3;
+  --hood-sidebar: #FAF6EE;
+  --hood-panel: #FFFDF8;
+  --hood-text: #14203A;
+  --hood-muted: #4D576C;
+  --hood-faint: #646B7C;
+  --hood-blue: #1F5DAA;
+  --hood-selection: #DCE7F5;
+  --hood-tab-active: #EDE5D6;
+  --hood-hover: #EDE5D6;
+  --hood-code: #EDE5D6;
+  --hood-line: #DDD3C2;
+  --hood-line-strong: #8C826F;
+  --hood-on-action: #FFFFFF;
+  --hood-ok: #0D7064;
+  --hood-warn: #A84012;
+  --hood-fail: #A8274A;
+  --hood-ok-soft: #D5EDE8;
+  --hood-warn-soft: #FAE6D8;
+  --hood-fail-soft: #F6DCE2;
+}
+/* palette:end */
+
+body.theme-dark,
+body.theme-light {
+  --background-primary: var(--hood-page);
+  --background-primary-alt: var(--hood-panel);
+  --background-secondary: var(--hood-sidebar);
+  --background-secondary-alt: var(--hood-panel);
+  --background-modifier-hover: var(--hood-hover);
+  --background-modifier-border: var(--hood-line);
+  --background-modifier-border-hover: var(--hood-line-strong);
+  --background-modifier-border-focus: var(--hood-blue);
+  --background-modifier-form-field: var(--hood-panel);
+  --background-modifier-form-field-highlighted: var(--hood-hover);
+  --panel-border-color: var(--hood-line);
+  --interactive-normal: var(--hood-panel);
+  --interactive-hover: var(--hood-hover);
+  --interactive-accent: var(--hood-blue);
+  --interactive-accent-hover: var(--hood-blue);
+  --text-on-accent: var(--hood-on-action);
+  --text-error: var(--hood-fail);
+  --text-error-hover: var(--hood-fail);
+  --background-modifier-error: var(--hood-fail-soft);
+  --background-modifier-error-hover: var(--hood-fail-soft);
+  --background-modifier-success: var(--hood-ok-soft);
+  --text-highlight-bg: var(--hood-warn-soft);
+  --tag-color: var(--hood-blue);
+  --tag-color-hover: var(--hood-blue);
+  --tag-background: var(--hood-selection);
+  --tag-background-hover: var(--hood-hover);
+  --text-normal: var(--hood-text);
+  --text-muted: var(--hood-muted);
+  --text-faint: var(--hood-faint);
+  --text-accent: var(--hood-blue);
+  --text-accent-hover: var(--hood-blue);
+  --text-selection: var(--hood-selection);
+  --link-color: var(--hood-blue);
+  --link-color-hover: var(--hood-blue);
+  --link-external-color: var(--hood-blue);
+  --link-external-color-hover: var(--hood-blue);
+  --code-background: var(--hood-code);
+  --font-interface: "Avenir Next", Figtree, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-text: "Avenir Next", Figtree, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-monospace: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --link-decoration-hover: underline;
+  --link-external-decoration-hover: underline;
+  --file-line-width: 38em;
+  --line-height-normal: 1.7;
+  --h1-weight: 600;
+  --h2-weight: 600;
+  --h3-weight: 500;
+  --h4-weight: 500;
+  --h5-weight: 500;
+  --h6-weight: 500;
+  --inline-title-weight: 600;
+  --titlebar-background: var(--hood-page);
+  --titlebar-background-focused: var(--hood-page);
+  --ribbon-background: var(--hood-sidebar);
+  --ribbon-background-collapsed: var(--hood-page);
+}
+
+body .workspace {
+  --divider-color: transparent;
+  --tab-divider-color: transparent;
+  --tab-outline-color: transparent;
+  --tab-container-background: var(--hood-page);
+  
+  --tab-background-active: var(--hood-tab-active);
+  --tab-text-color: var(--hood-muted);
+  --tab-text-color-active: var(--hood-text);
+  --tab-text-color-focused-active: var(--hood-text);
+  --tab-text-color-focused-active-current: var(--hood-text);
+  --nav-indentation-guide-width: 0;
+  --nav-item-color: var(--hood-muted);
+  --nav-item-color-active: var(--hood-text);
+  --nav-item-background-active: var(--hood-selection);
+  --nav-item-background-hover: var(--hood-hover);
+  --nav-item-weight-active: 600;
+  --nav-item-radius: 6px;
+}
+
+body .workspace-drawer {
+  --nav-indentation-guide-width: 0;
+  --nav-item-color: var(--hood-muted);
+  --nav-item-color-active: var(--hood-text);
+  --nav-item-background-active: var(--hood-selection);
+  --nav-item-background-hover: var(--hood-hover);
+  --nav-item-weight-active: 600;
+  --nav-item-radius: 6px;
+}
+
+body .view-header {
+  border-bottom-color: transparent;
+}
+
+body.is-mobile .nav-file-title,
+body.is-mobile .nav-folder-title {
+  min-height: 44px;
+}
+
+/* 2. Typography and editor.
+ * Hood's existing 38em measure and font stack win over the former typography
+ * snippet's less-specific body variables. Preserve that effective behavior.
+ */
+.markdown-source-view.mod-cm6 .cm-line {
+  letter-spacing: 0.01em;
+  line-height: 1.7;
+}
+.markdown-preview-view p,
+.markdown-preview-view li {
+  letter-spacing: 0.01em;
+  line-height: 1.7;
+}
+.markdown-source-view.mod-cm6 .cm-line,
+.markdown-preview-view p {
+  word-spacing: 0.02em;
+}
+.cm-active {
+  background-color: transparent !important;
+}
+
+/* 3. Mobile. Preserve the approved toolbar and drawer behavior.
+ * Drawer selectors are inherited; narrow Split View still needs a runtime check.
+ * Width approach attributed to github.com/aaaaalexis/obsidian-cupertino.
+ */
+.mobile-toolbar {
+  display: none !important;
+}
+body.is-tablet {
+  --eww-ipad-sidebar-width: 400px;
+}
+body.is-tablet .workspace-drawer:not(.is-pinned).mod-left,
+body.is-tablet .workspace-drawer:not(.is-pinned).mod-right {
+  max-width: var(--eww-ipad-sidebar-width);
+}
+body.is-tablet .workspace-drawer.is-pinned.mod-left,
+body.is-tablet .workspace-drawer.is-pinned.mod-right {
+  width: var(--eww-ipad-sidebar-width);
+  max-width: 45%;
+}
+
+/* 4. Cursor. Only the custom-cursor setting enables motion and CodeMirror
+ * cursor overrides. Native fallback remains visible unless a live overlay
+ * has valid geometry for that specific editor.
+ */
+body { --eww-caret: var(--hood-blue); }
+.cm-editor .cm-content {
+  caret-color: var(--eww-caret) !important;
+}
+body.hood-custom-cursor .cm-editor .cm-content.hood-cursor-active {
+  caret-color: transparent !important;
+}
+.hood-cursor-bar {
+  position: absolute;
+  width: 3px;
+  background: var(--eww-caret);
+  border-radius: 1px;
+  pointer-events: none;
+  z-index: 4;
+  transition: left 90ms cubic-bezier(.2,.7,.3,1),
+              top 90ms cubic-bezier(.2,.7,.3,1);
+}
+body:not(.hood-custom-cursor) .hood-cursor-bar {
+  display: none;
+}
+body.hood-custom-cursor .cm-cursorLayer,
+body.hood-custom-cursor .cm-cursor,
+body.hood-custom-cursor .cm-cursor-primary,
+body.hood-custom-cursor .cm-cursor-secondary,
+body.hood-custom-cursor .cm-fat-cursor,
+body.hood-custom-cursor .cm-editor .cm-fat-cursor {
+  animation: none !important;
+}
+body.hood-custom-cursor .cm-cursor,
+body.hood-custom-cursor .cm-cursor-primary,
+body.hood-custom-cursor .cm-cursor-secondary,
+body.hood-custom-cursor .cm-fat-cursor,
+body.hood-custom-cursor .cm-editor .cm-fat-cursor {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+body.hood-custom-cursor .cm-editor .cm-cursor,
+body.hood-custom-cursor .cm-editor .cm-cursor-primary {
+  border-left: 4px solid var(--eww-caret) !important;
+  border-right: none !important;
+  transition: left 90ms cubic-bezier(.2,.7,.3,1),
+              top 90ms cubic-bezier(.2,.7,.3,1) !important;
+}
+body.hood-custom-cursor .cm-fat-cursor .cm-cursor,
+body.hood-custom-cursor .cm-editor.cm-focused .cm-fat-cursor .cm-cursor {
+  background: var(--eww-caret) !important;
+  border: none !important;
+  color: var(--background-primary) !important;
+}
+body.hood-custom-cursor .cm-editor:not(.cm-focused) .cm-fat-cursor .cm-cursor {
+  outline: 1px solid var(--eww-caret) !important;
+  background: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hood-cursor-bar,
+  body.hood-custom-cursor .cm-editor .cm-cursor,
+  body.hood-custom-cursor .cm-editor .cm-cursor-primary {
+    transition: none !important;
+  }
+}

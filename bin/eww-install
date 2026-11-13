@@ -192,6 +192,36 @@ link_vault_suffixes() {
   ok "vault suffix files linked: $count"
 }
 
+# Copy the Hood plugin into the vault's Obsidian plugin folder. The files are
+# copied, not linked, because the vault is carried by a sync service. A file
+# that differs is saved to the backup folder first. The plugin's own settings
+# file (data.json) and the list of enabled plugins are never touched.
+deploy_obsidian_plugin() {
+  [ -n "$VAULT" ] && [ -d "$VAULT/.obsidian" ] || return 0
+  source_dir=$REPO/obsidian/plugins/hood
+  target_dir=$VAULT/.obsidian/plugins/hood
+  [ -d "$source_dir" ] || return 0
+  mkdir -p "$target_dir"
+  copied=0
+  for name in manifest.json main.js styles.css; do
+    if cmp -s "$source_dir/$name" "$target_dir/$name"; then
+      continue
+    fi
+    if [ -e "$target_dir/$name" ]; then
+      mkdir -p "$BACKUP_DIR/vault-obsidian-hood"
+      cp "$target_dir/$name" "$BACKUP_DIR/vault-obsidian-hood/$name"
+      backed_up=$((backed_up + 1))
+    fi
+    cp "$source_dir/$name" "$target_dir/$name"
+    copied=$((copied + 1))
+  done
+  if [ "$copied" -gt 0 ]; then
+    ok "Hood plugin copied into the vault: $copied files. Reload Obsidian to see changes."
+  else
+    ok "Hood plugin in the vault is current"
+  fi
+}
+
 # Fetch the repo that holds a third-party skill, at its pinned commit. Prints the skill folder.
 # Skills that share a source and a commit share one clone.
 fetch_third_party() {
@@ -345,6 +375,7 @@ link_home_files
 ensure_zshrc_line
 link_programs
 link_vault_suffixes
+deploy_obsidian_plugin
 deploy_skills
 build_instructions
 install_hook

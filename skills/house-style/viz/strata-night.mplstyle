@@ -1,4 +1,4 @@
-# Strata night theme for matplotlib. Maintained from tokens/tokens.json.
+# Strata night theme for matplotlib. Generated from tokens/tokens.json by tools/themes/build.py. Do not edit.
 # Register fonts first: strata_viz.use("night").
 figure.facecolor: 161619
 figure.edgecolor: 161619

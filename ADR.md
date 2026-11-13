@@ -129,3 +129,14 @@ This repo is public. Records must not contain personal details, employer names, 
 `~/.zshrc` is not linked, because installers append machine-specific lines to it. Install adds one line to it that loads `~/.config/eww/eww.zsh`. That file loads `~/.config/eww/private.zsh` when the vault provides one.
 
 **Consequences.** Every managed file has one source: the repo for shared files, the vault for private ones. A machine with no `~/.config/eww/vault` file gets only public content, which suits a pull-only machine. Private files depend on the vault being present before install runs. A program that replaces its config file, in place of writing through the link, will break that link until the next install.
+
+## ADR 12: The old generator and the Hood plugin are reused
+
+- Date: 2026-11-13
+- Status: Accepted. Refines ADR 8.
+
+**Context.** ADR 8 called for a generator and an Obsidian snippet. Two existing pieces already did this work. A generator from the previous settings repo reproduced every current export exactly. The vault already ran Hood, an Obsidian plugin that adapts the house style and adds a custom cursor, with its colors written by hand.
+
+**Decision.** The generator moves to `tools/themes/build.py` and runs with `make themes`. It is not an `eww` verb. `make test` fails when an export differs from the tokens. Hood moves to `obsidian/plugins/hood/`. The generator writes its palette block; the rest of its CSS stays hand-written. `eww install` copies the plugin into the vault on machines that name one. It copies, not links, because the vault is carried by a sync service. It never touches the plugin's settings file or the list of enabled plugins. Ghostty theme files under `home/` are generator outputs too.
+
+**Consequences.** No new generator and no new Obsidian snippet. Exports are read-only outputs. A token change reaches Obsidian after `make themes` and `eww install`, then travels to other machines by Obsidian Sync. Hood's hand-written rules and its cursor code have no tests in this repo yet.

@@ -1,4 +1,4 @@
-# Strata night for Ghostty. Maintained from tokens/tokens.json.
+# Strata night for Ghostty. Generated from tokens/tokens.json by tools/themes/build.py. Do not edit.
 # Copy to ~/.config/ghostty/themes/strata-night
 background = #161619
 foreground = #D4D4D8

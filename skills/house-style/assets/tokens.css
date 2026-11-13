@@ -1,4 +1,4 @@
-/* Strata tokens. Source: tokens/tokens.json. */
+/* house-style tokens: Generated from tokens/tokens.json by tools/themes/build.py. Do not edit. */
 /* Theme selectors: night is the default; data-theme="paper" or "light" selects paper. */
 :root, [data-theme="dark"], [data-theme="night"] {
   color-scheme: dark;

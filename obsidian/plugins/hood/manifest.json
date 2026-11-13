@@ -1,0 +1,9 @@
+{
+  "id": "hood",
+  "name": "Hood",
+  "version": "0.1.0",
+  "minAppVersion": "1.0.0",
+  "description": "Atom-based appearance, writing and mobile styling, with an optional custom cursor.",
+  "author": "ewhitling",
+  "isDesktopOnly": false
+}

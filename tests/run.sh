@@ -146,6 +146,22 @@ printf 'export KEEP_ME=1\n' >"$EWW_HOME/.zshrc"
 check "existing ~/.zshrc content is kept" grep -q 'KEEP_ME' "$EWW_HOME/.zshrc"
 check "loading line is appended to an existing ~/.zshrc" grep -q '.config/eww/eww.zsh' "$EWW_HOME/.zshrc"
 
+# The Hood plugin is copied into a vault that has an Obsidian folder.
+check "no plugin folder is made in a vault without .obsidian" test ! -e "$WORK/vault/.obsidian"
+mkdir -p "$WORK/vault/.obsidian/plugins/hood"
+printf 'old styles\n' >"$WORK/vault/.obsidian/plugins/hood/styles.css"
+printf '{"customCursor": true}\n' >"$WORK/vault/.obsidian/plugins/hood/data.json"
+"$COPY/bin/eww-install" >/dev/null 2>&1
+for name in manifest.json main.js styles.css; do
+  check "Hood $name is copied into the vault" cmp -s "$COPY/obsidian/plugins/hood/$name" "$WORK/vault/.obsidian/plugins/hood/$name"
+done
+check "Hood copy is a real file, not a link" test ! -L "$WORK/vault/.obsidian/plugins/hood/styles.css"
+check "Hood settings file is left alone" grep -q customCursor "$WORK/vault/.obsidian/plugins/hood/data.json"
+check "the replaced Hood file is in the backup folder" sh -c "grep -rq 'old styles' '$EWW_HOME/.local/state/eww/backup'"
+files_before=$(find "$EWW_HOME/.local/state/eww/backup" | wc -l)
+"$COPY/bin/eww-install" >/dev/null 2>&1
+check "Hood copy is stable across runs" test "$files_before" -eq "$(find "$EWW_HOME/.local/state/eww/backup" | wc -l)"
+
 printf '%s\n' "$WORK/no-such-vault" >"$EWW_HOME/.config/eww/vault"
 check "a missing vault does not stop install" "$COPY/bin/eww-install"
 rm "$EWW_HOME/.config/eww/vault"

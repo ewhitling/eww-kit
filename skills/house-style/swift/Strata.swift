@@ -1,4 +1,4 @@
-// Strata tokens for SwiftUI. Maintained from tokens/tokens.json.
+// Strata tokens for SwiftUI. Generated from tokens/tokens.json by tools/themes/build.py. Do not edit.
 import SwiftUI
 
 public enum StrataTheme { case night, paper }

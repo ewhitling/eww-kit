@@ -1,4 +1,4 @@
-# Strata paper for Streamlit. Maintained from tokens/tokens.json.
+# Strata paper for Streamlit. Generated from tokens/tokens.json by tools/themes/build.py. Do not edit.
 # Copy to .streamlit/config.toml
 [theme]
 base = "light"
