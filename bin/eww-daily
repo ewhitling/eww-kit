@@ -15,7 +15,7 @@ vault.
 A note is left out when it:
   is tagged #no-resurface
   is tagged #llm-generated, unless it is a definition in collections/definition
-  sits in collections/ttrpg, collections/game, or collections/_important
+  sits in collections/ttrpg, game, travel, film, or _important
   was shown in the last 60 days (read from past day-notes)
 
 Running it again on the same day changes nothing.
@@ -34,8 +34,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 SECTION_HEADING = "## Resurfaced"
-# Campaign and game notes are reference material. _important holds personal records.
-SKIPPED_KINDS = frozenset({"ttrpg", "game", "_important"})
+# Campaign, game, travel, and film notes are reference material, not ideas to
+# revisit. _important holds personal records.
+SKIPPED_KINDS = frozenset({"ttrpg", "game", "travel", "film", "_important"})
 KINDS_SHOWN_WHEN_MACHINE_WRITTEN = frozenset({"definition"})
 PASSAGES_PER_DAY = 3
 RECENT_DAYS = 60
