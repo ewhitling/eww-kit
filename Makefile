@@ -8,6 +8,7 @@ help:
 
 test:
 	@sh tests/run.sh
+	@sh tests/guard-paths.sh
 	@uv run --no-project tools/themes/build.py --check
 	@uv run --no-project --with pytest pytest -q -p no:cacheprovider tools/themes tools/obsidian tests/test_daily.py tests/test_define.py tests/test_weekly.py
 
@@ -15,7 +16,7 @@ themes:
 	@uv run --no-project tools/themes/build.py
 
 lint:
-	@shellcheck setup.sh bin/eww bin/eww-install bin/eww-update bin/eww-doctor bin/eww-h bin/eww-context hooks/pre-commit tests/run.sh
+	@shellcheck setup.sh bin/eww bin/eww-install bin/eww-update bin/eww-doctor bin/eww-h bin/eww-context hooks/pre-commit tests/run.sh tests/guard-paths.sh
 	@zsh -n home/.config/eww/eww.zsh
 
 obsidian-snapshot:

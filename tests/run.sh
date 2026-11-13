@@ -253,6 +253,9 @@ else
   printf 'SKIP: shell settings tests (zsh is not installed)\n'
 fi
 
+# The Pi path guard ships as a home file, so install links it for Pi.
+check "the Pi path guard is linked" is_link_to "$EWW_HOME/.pi/agent/extensions/guard-paths.ts" "$COPY/home/.pi/agent/extensions/guard-paths.ts"
+
 # --- doctor ----------------------------------------------------------------
 doctor=$(PATH=$PATH_FOR_TEST "$COPY/bin/eww-doctor" 2>&1) || true
 check "doctor sees the linked programs" contains "$doctor" "programs linked"

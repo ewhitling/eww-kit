@@ -54,6 +54,16 @@ for tool in claude pi nvim herdr fzf jq starship; do
   if command -v "$tool" >/dev/null 2>&1; then ok "$tool found"; else warn "$tool is not installed"; fi
 done
 
+# Pi must not run without its path guard, which blocks writes to credential
+# stores and known outbound network commands.
+if command -v pi >/dev/null 2>&1; then
+  if [ -e "$EWW_HOME/.pi/agent/extensions/guard-paths.ts" ]; then
+    ok "Pi path guard installed"
+  else
+    bad "Pi is installed but its path guard is missing (run eww install)"
+  fi
+fi
+
 case ":$PATH:" in
   *":$EWW_HOME/.local/bin:"*) ok "~/.local/bin is on the path" ;;
   *) bad "~/.local/bin is not on the path" ;;

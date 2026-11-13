@@ -14,15 +14,16 @@ Decisions behind this list are in `ADR.md`.
 - **`eww h` (alias `eww w`).** Opens a herdr workspace for a repo, a vault project, or the vault: agent on the left, `eww context` on the right. Bare `eww h` opens the repo around the current folder, or shows a picker. `eww h stop` stops the herdr server.
 - **`eww context`.** Lists what an agent session in a folder loads, with token estimates.
 - **Leak-check commit hook.** gitleaks plus a private denylist. Fails closed.
+- **Pi path guard.** `eww install` links a Pi extension that blocks writes to credential stores and known outbound network commands. `eww doctor` fails when Pi is installed without it.
 - **Theme generator.** `make themes` writes every house-style export from `skills/house-style/tokens/tokens.json`: CSS, chart styles, Swift, Streamlit, Ghostty themes, the nvim color scheme, and the palette of the Hood plugin for Obsidian. `make test` fails when an export is out of date.
 - **Hood plugin for Obsidian.** Kept in `obsidian/plugins/hood/`. `eww install` copies it into the vault on machines that name one.
 - **Obsidian starting settings.** `make obsidian-snapshot` copies the vault's settings into `obsidian/defaults/`. `eww install` copies them, and the Atom theme, into a vault only where a file is missing.
 
-Tested with `make test` (145 checks in a temporary home folder, with herdr replaced by a stand-in, plus the export check and 86 tests for the generator, the snapshot, `eww daily`, `eww define`, and `eww weekly`), `make lint`, and a trial install into a temporary home using the real vault. Installed for real on one Mac on 2026-11-12; `eww doctor` passes there, and `eww h`, the numbered picker, and the map colors work in real use. Not yet tested: Ubuntu, `setup.sh` end to end, the `fzf` picker. Hood's hand-written CSS rules and cursor code have no tests here.
+Tested with `make test` (146 checks in a temporary home folder, with herdr replaced by a stand-in, plus the export check and 86 tests for the generator, the snapshot, `eww daily`, `eww define`, and `eww weekly`), `make lint`, and a trial install into a temporary home using the real vault. Installed for real on one Mac on 2026-11-12; `eww doctor` passes there, and `eww h`, the numbered picker, and the map colors work in real use. Not yet tested: Ubuntu, `setup.sh` end to end, the `fzf` picker. Hood's hand-written CSS rules and cursor code have no tests here.
 
 ## In flight
 
-2. **Repo, setup script, launcher.** Built, published, and installed on one Mac. Remaining: the fresh VPS test, one day of real use, then archive the old tool repos.
+2. **Repo, setup script, launcher.** Built, published, and installed on two Macs. The old tool repos were archived locally on 2026-11-13, and the old tool was uninstalled. Remaining: the fresh VPS test.
 3. **Design tokens.** The generator, the Ghostty themes, the Hood palette, and an nvim color scheme are done. Remaining: one day of real use.
 4. **`eww daily`.** Built and tested, with a dry run on the real vault. It adds three passages from `collections/` to the day-note that Obsidian's Daily notes setting names, uses no LLM, and keeps no state outside the vault. The first real write was on 2026-11-13. It is run by hand, with no schedule, by choice. Remaining: one day of use.
 5. **`eww define`.** Built and tested, with a dry run against the real agent. One headless call with no tools writes a definition note: a mechanism line, a plain definition, one Mermaid diagram, and two notes on practice. The reply is checked before it is written. `eww daily` may resurface these definitions. The first real note was written on 2026-11-13, and its diagram renders in Obsidian. Remaining: one day of use.

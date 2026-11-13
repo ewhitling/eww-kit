@@ -196,3 +196,14 @@ This repo is public. Records must not contain personal details, employer names, 
 
 **Consequences.** One mechanism fewer, and tags are plain text that any editor keeps. Notes cannot be sorted by a stored date, and database views that work on properties are not available. Alternate note names (aliases) are not available either. How a lab project is marked is left to the Lab design session. The vault backup taken before the migration holds every original block.
 
+## ADR 18: Pi and Claude are both supported, and Pi keeps its path guard
+
+- Date: 2026-11-13
+- Status: Accepted
+
+**Context.** An earlier settings repo dropped Pi and deleted its safety extension, leaving Claude Code as the only supported harness. The stack chosen for this repo lists both. `eww install` already deploys instructions and skills to Pi, but Pi was running with no guard.
+
+**Decision.** Both harnesses are supported. The Pi path guard is restored as a home file, so `eww install` links it into `~/.pi/agent/extensions/`. It blocks writes to credential stores, asks before changes to system paths and destructive actions, and blocks known outbound network commands other than `gh` and `git push`. `eww doctor` counts a machine as broken when Pi is installed and the guard is missing. The guard's policy has its own test.
+
+**Consequences.** Pi cannot fetch from the network, so `eww update` and `eww weekly` are run by a person or from Claude, not from inside Pi. The guard scans command text and is not an operating-system sandbox, so a determined command can evade it. A convenience extension that aliased the exit command was not restored.
+
