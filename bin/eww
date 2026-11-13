@@ -19,8 +19,13 @@ VERSION=$(cat "$REPO/VERSION" 2>/dev/null || echo unknown)
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && [ -z "${EWW_NO_COLOR:-}" ] && [ "${TERM:-}" != dumb ]; then
   bold=$(printf '\033[1m') dim=$(printf '\033[2m') red=$(printf '\033[31m')
   accent=$(printf '\033[34m') reset=$(printf '\033[0m')
+  # The verb gradient needs 24-bit color. Other terminals get the plain accent.
+  case ${COLORTERM:-} in
+    truecolor | 24bit) gradient=1 ;;
+    *) gradient='' ;;
+  esac
 else
-  bold='' dim='' red='' accent='' reset=''
+  bold='' dim='' red='' accent='' reset='' gradient=''
 fi
 
 # Print one line per program: "group<TAB>verb<TAB>summary".
@@ -55,16 +60,43 @@ list_programs() {
   IFS=$old_ifs
 }
 
+# The color for verb number $1 of $2: a blue to purple gradient in 24-bit color.
+# Three anchors: deep blue, light blue-purple, deep purple. All stay bright
+# enough to read on a dark background.
+gradient_color() {
+  step=0
+  [ "$2" -gt 1 ] && step=$(($1 * 15 / ($2 - 1)))
+  if [ "$step" -le 7 ]; then
+    r=$((70 + 95 * step / 7)) g=$((120 + 30 * step / 7)) b=250
+  else
+    step=$((step - 7))
+    r=$((165 + 10 * step / 8)) g=$((150 - 70 * step / 8)) b=$((250 - 30 * step / 8))
+  fi
+  printf '\033[38;2;%d;%d;%dm' "$r" "$g" "$b"
+}
+
 print_map() {
+  tab=$(printf '\t')
   programs=$(list_programs)
-  printf '%seww %s%s  mise-en-place for deep work\n' "$bold" "$VERSION" "$reset"
-  for group in place work capture other; do
-    rows=$(printf '%s\n' "$programs" | awk -F'\t' -v g="$group" '$1 == g' | sort -t"$(printf '\t')" -k2)
-    [ -n "$rows" ] || continue
-    printf '\n%s─ %s ─────────────────────────────%s\n' "$dim" "$group" "$reset"
-    printf '%s\n' "$rows" | while IFS="$(printf '\t')" read -r _ verb summary; do
-      printf '  %s%-11s%s %s\n' "$accent" "$verb" "$reset" "$summary"
+  ordered=$(
+    for group in place work capture other; do
+      printf '%s\n' "$programs" | awk -F'\t' -v g="$group" '$1 == g' | sort -t"$tab" -k2
     done
+  )
+  total=$(printf '%s\n' "$ordered" | grep -c . || true)
+  printf '%seww %s%s  mise-en-place for deep work\n' "$bold" "$VERSION" "$reset"
+  index=0
+  shown=''
+  printf '%s\n' "$ordered" | while IFS="$tab" read -r group verb summary; do
+    [ -n "$verb" ] || continue
+    if [ "$group" != "$shown" ]; then
+      printf '\n%s─ %s ─────────────────────────────%s\n' "$dim" "$group" "$reset"
+      shown=$group
+    fi
+    color=$accent
+    [ -n "$gradient" ] && color=$(gradient_color "$index" "$total")
+    printf '  %s%-11s%s %s\n' "$color" "$verb" "$reset" "$summary"
+    index=$((index + 1))
   done
   printf '\n%seww help <verb> for detail%s\n' "$dim" "$reset"
 }
