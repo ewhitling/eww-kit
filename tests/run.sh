@@ -40,13 +40,18 @@ ln -s eww-doctor "$COPY/bin/eww-alias"
 UPSTREAM=$WORK/upstream
 mkdir -p "$UPSTREAM/pack/their-skill"
 printf '# Their skill v1\n' >"$UPSTREAM/pack/their-skill/SKILL.md"
+mkdir -p "$UPSTREAM/pack/their-other"
+printf '# Their other skill\n' >"$UPSTREAM/pack/their-other/SKILL.md"
 git -C "$UPSTREAM" init -q
 git -C "$UPSTREAM" -c user.name=t -c user.email=t@example.com add -A
 git -C "$UPSTREAM" -c user.name=t -c user.email=t@example.com commit -q -m one
 PINNED=$(git -C "$UPSTREAM" rev-parse HEAD)
 printf '# Their skill v2\n' >"$UPSTREAM/pack/their-skill/SKILL.md"
 git -C "$UPSTREAM" -c user.name=t -c user.email=t@example.com commit -q -am two
+# The test uses its own lock file, so it never reaches the network.
+: >"$COPY/skills.lock"
 printf 'their-skill %s %s pack/their-skill\n' "$UPSTREAM" "$PINNED" >>"$COPY/skills.lock"
+printf 'their-other %s %s pack/their-other\n' "$UPSTREAM" "$PINNED" >>"$COPY/skills.lock"
 
 # A home folder that already holds files eww did not create.
 export EWW_HOME="$WORK/home"
@@ -88,6 +93,8 @@ check "built skill ends with the suffix" grep -q 'Skill suffix line' "$EWW_HOME/
 check "repo skill file is not changed by the suffix" sh -c "! grep -q 'Skill suffix line' '$COPY/skills/own-skill/SKILL.md'"
 check "Pi gets the skill" test -f "$EWW_HOME/.pi/agent/skills/own-skill/SKILL.md"
 check "third-party skill is at the pinned commit" grep -q 'v1' "$EWW_HOME/.claude/skills/their-skill/SKILL.md"
+check "second third-party skill from the same source is deployed" grep -q 'other skill' "$EWW_HOME/.claude/skills/their-other/SKILL.md"
+check "skills from one source and commit share one clone" test "$(find "$EWW_HOME/.local/share/eww/third-party" -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 1
 check "hook is skipped with no denylist" sh -c "! test -e '$COPY/.git/hooks/pre-commit'"
 
 # --- install again ---------------------------------------------------------

@@ -115,10 +115,12 @@ link_programs() {
   ok "programs linked into ~/.local/bin: $count"
 }
 
-# Fetch one third-party skill at its pinned commit. Prints the skill folder.
+# Fetch the repo that holds a third-party skill, at its pinned commit. Prints the skill folder.
+# Skills that share a source and a commit share one clone.
 fetch_third_party() {
-  name=$1 url=$2 commit=$3 subpath=${4:-.}
-  checkout=$SHARE/third-party/$name
+  url=$1 commit=$2 subpath=${3:-.}
+  key=$(printf '%s' "$url" | sed 's|^[a-z]*://||; s|[^A-Za-z0-9._-]|-|g')@$(printf '%s' "$commit" | cut -c1-12)
+  checkout=$SHARE/third-party/$key
   if [ ! -d "$checkout/.git" ]; then
     mkdir -p "$SHARE/third-party"
     git clone --quiet "$url" "$checkout" || return 1
@@ -126,7 +128,9 @@ fetch_third_party() {
   if ! git -C "$checkout" cat-file -e "$commit^{commit}" 2>/dev/null; then
     git -C "$checkout" fetch --quiet origin || return 1
   fi
-  git -C "$checkout" checkout --quiet --detach "$commit" || return 1
+  if [ "$(git -C "$checkout" rev-parse HEAD)" != "$commit" ]; then
+    git -C "$checkout" checkout --quiet --detach "$commit" || return 1
+  fi
   printf '%s\n' "$checkout/$subpath"
 }
 
@@ -177,7 +181,7 @@ deploy_skills() {
   if [ -f "$REPO/skills.lock" ]; then
     while read -r name url commit subpath; do
       case $name in '' | '#'*) continue ;; esac
-      if skill_dir=$(fetch_third_party "$name" "$url" "$commit" "$subpath") && [ -f "$skill_dir/SKILL.md" ]; then
+      if skill_dir=$(fetch_third_party "$url" "$commit" "$subpath") && [ -f "$skill_dir/SKILL.md" ]; then
         deploy_skill "$name" "$skill_dir"
         fetched=$((fetched + 1))
       else

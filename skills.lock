@@ -4,3 +4,38 @@
 #   name  git-url  commit  [folder inside the repo that holds SKILL.md]
 #
 # The folder defaults to the repo root.
+
+# Matt Pocock skills, MIT licence.
+ask-matt https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/ask-matt
+chief-of-staff https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/in-progress/chief-of-staff
+claude-handoff https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/in-progress/claude-handoff
+code-review https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/code-review
+codebase-design https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/codebase-design
+diagnosing-bugs https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/diagnosing-bugs
+domain-modeling https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/domain-modeling
+git-guardrails-claude-code https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/misc/git-guardrails-claude-code
+grill-me https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/productivity/grill-me
+grill-with-docs https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/grill-with-docs
+grilling https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/productivity/grilling
+handoff https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/productivity/handoff
+implement https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/implement
+implement-spec https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/implement-spec
+improve-codebase-architecture https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/improve-codebase-architecture
+loop-me https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/in-progress/loop-me
+pr https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/pr
+prototype https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/prototype
+research https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/research
+retro https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/retro
+setup-matt-pocock-skills https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/setup-matt-pocock-skills
+tdd https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/tdd
+to-questionnaire https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/productivity/to-questionnaire
+to-spec https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/to-spec
+to-tickets https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/to-tickets
+triage https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/triage
+wait-what https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/productivity/wait-what
+wayfinder https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/wayfinder
+wizard https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/engineering/wizard
+writing-beats https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/in-progress/writing-beats
+writing-fragments https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/in-progress/writing-fragments
+writing-shape https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/in-progress/writing-shape
+writing-for-agents https://github.com/mattpocock/skills 49dd158d1076134a641b33efb035946536778336 skills/productivity/writing-for-agents
