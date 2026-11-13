@@ -2,6 +2,7 @@
 # First run on a new machine. Unattended. Works on macOS and Ubuntu.
 #
 #   1. Install base tools: git, zsh, curl, fzf, jq, neovim, uv, starship
+#      On macOS, also the Ghostty terminal app
 #   2. Clone this repo, or use the checkout this script is running from
 #   3. Run eww install
 #
@@ -32,6 +33,11 @@ install_base_tools() {
         [ "$tool" = neovim ] && command_name=nvim
         have "$command_name" || brew install "$tool"
       done
+      # The terminal app. home/ holds its settings and themes.
+      if [ ! -d /Applications/Ghostty.app ] && [ ! -d "$HOME/Applications/Ghostty.app" ]; then
+        say "installing Ghostty"
+        brew install --cask ghostty
+      fi
       ;;
     Linux)
       if ! have apt-get; then
