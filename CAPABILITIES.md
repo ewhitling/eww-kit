@@ -18,7 +18,7 @@ Decisions behind this list are in `ADR.md`.
 - **Hood plugin for Obsidian.** Kept in `obsidian/plugins/hood/`. `eww install` copies it into the vault on machines that name one.
 - **Obsidian starting settings.** `make obsidian-snapshot` copies the vault's settings into `obsidian/defaults/`. `eww install` copies them, and the Atom theme, into a vault only where a file is missing.
 
-Tested with `make test` (145 checks in a temporary home folder, with herdr replaced by a stand-in, plus the export check and 77 tests for the generator, the snapshot, `eww daily`, `eww define`, and `eww weekly`), `make lint`, and a trial install into a temporary home using the real vault. Installed for real on one Mac on 2026-11-12; `eww doctor` passes there, and `eww h`, the numbered picker, and the map colors work in real use. Not yet tested: Ubuntu, `setup.sh` end to end, the `fzf` picker. Hood's hand-written CSS rules and cursor code have no tests here.
+Tested with `make test` (145 checks in a temporary home folder, with herdr replaced by a stand-in, plus the export check and 86 tests for the generator, the snapshot, `eww daily`, `eww define`, and `eww weekly`), `make lint`, and a trial install into a temporary home using the real vault. Installed for real on one Mac on 2026-11-12; `eww doctor` passes there, and `eww h`, the numbered picker, and the map colors work in real use. Not yet tested: Ubuntu, `setup.sh` end to end, the `fzf` picker. Hood's hand-written CSS rules and cursor code have no tests here.
 
 ## In flight
 
@@ -26,7 +26,7 @@ Tested with `make test` (145 checks in a temporary home folder, with herdr repla
 3. **Design tokens.** The generator, the Ghostty themes, the Hood palette, and an nvim color scheme are done. Remaining: one day of real use.
 4. **`eww daily`.** Built and tested, with a dry run on the real vault. It adds three passages from `collections/` to the day-note that Obsidian's Daily notes setting names, uses no LLM, and keeps no state outside the vault. The first real write was on 2026-11-13. It is run by hand, with no schedule, by choice. Remaining: one day of use.
 5. **`eww define`.** Built and tested, with a dry run against the real agent. One headless call with no tools writes a definition note: a mechanism line, a plain definition, one Mermaid diagram, and two notes on practice. The reply is checked before it is written. `eww daily` may resurface these definitions. The first real note was written on 2026-11-13, and its diagram renders in Obsidian. Remaining: one day of use.
-6. **`eww weekly`.** Built and tested, with a dry run on 11 live sources. The program fetches the sources listed in the vault note `_meta/eww/weekly/sources.md`. One headless call with no tools picks up to five concepts and cites items by number. The note goes to `inbox/`. The first real note was written on 2026-11-13. It is run by hand, with no schedule, by choice. Remaining: a day of use, and a second week to test what counts as new.
+6. **`eww weekly`.** Built and tested, with a dry run on 11 live sources. The program fetches the sources listed in the vault note `_meta/eww/weekly/sources.md`. Two headless calls with no tools: one picks up to five concepts and cites items by number, one explains each from the fetched articles (what it is, the problem it solves, why it is being discussed, its mechanism). The note goes to `inbox/`. The first real note was written on 2026-11-13. It is run by hand, with no schedule, by choice. Remaining: a day of use, and a second week to test what counts as new.
 
 ## Next
 
