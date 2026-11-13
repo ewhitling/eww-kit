@@ -1,0 +1,26 @@
+# Secrets and machine-private content. This repo is public.
+.env
+.env.*
+!.env.example
+private/
+suffixes.local/
+*.local.md
+denylist.txt
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+
+# Editors and operating system
+.DS_Store
+.idea/
+*.swp
+
+# Generated output
+out/
