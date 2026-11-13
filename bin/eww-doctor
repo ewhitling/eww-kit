@@ -49,7 +49,7 @@ bad() {
 for tool in git zsh uv; do
   if command -v "$tool" >/dev/null 2>&1; then ok "$tool found"; else bad "$tool is missing"; fi
 done
-for tool in claude pi nvim herdr fzf jq; do
+for tool in claude pi nvim herdr fzf jq starship; do
   if command -v "$tool" >/dev/null 2>&1; then ok "$tool found"; else warn "$tool is not installed"; fi
 done
 

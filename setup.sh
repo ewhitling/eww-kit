@@ -1,7 +1,7 @@
 #!/bin/sh
 # First run on a new machine. Unattended. Works on macOS and Ubuntu.
 #
-#   1. Install base tools: git, zsh, curl, fzf, jq, neovim, uv
+#   1. Install base tools: git, zsh, curl, fzf, jq, neovim, uv, starship
 #   2. Clone this repo, or use the checkout this script is running from
 #   3. Run eww install
 #
@@ -27,7 +27,7 @@ install_base_tools() {
         NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
         eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"
       fi
-      for tool in git fzf jq neovim uv gitleaks; do
+      for tool in git fzf jq neovim uv starship gitleaks; do
         command_name=$tool
         [ "$tool" = neovim ] && command_name=nvim
         have "$command_name" || brew install "$tool"
@@ -46,6 +46,11 @@ install_base_tools() {
       if ! have uv; then
         say "installing uv"
         curl -LsSf https://astral.sh/uv/install.sh | sh
+      fi
+      if ! have starship && [ ! -x "$HOME/.local/bin/starship" ]; then
+        say "installing starship"
+        mkdir -p "$HOME/.local/bin"
+        curl -fsSL https://starship.rs/install.sh | sh -s -- --yes --bin-dir "$HOME/.local/bin" >/dev/null
       fi
       # Make zsh the login shell. This is not fatal when it fails.
       if [ "${SHELL##*/}" != zsh ]; then

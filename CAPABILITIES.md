@@ -15,11 +15,11 @@ Decisions behind this list are in `ADR.md`.
 - **`eww context`.** Lists what an agent session in a folder loads, with token estimates.
 - **Leak-check commit hook.** gitleaks plus a private denylist. Fails closed.
 
-Tested with `make test` (112 checks in a temporary home folder; herdr is replaced by a stand-in), `make lint`, and a trial install into a temporary home using the real vault. Not yet tested: Ubuntu, a real install on a Mac, `setup.sh` end to end, `eww h` against a live herdr session, the picker.
+Tested with `make test` (112 checks in a temporary home folder; herdr is replaced by a stand-in), `make lint`, and a trial install into a temporary home using the real vault. Installed for real on one Mac on 2026-11-12; `eww doctor` passes there. Not yet tested: Ubuntu, `setup.sh` end to end, `eww h` against a live herdr session, the picker.
 
 ## In flight
 
-2. **Repo, setup script, launcher.** Mechanism and content are in place. Remaining: test on a fresh VPS, create the public GitHub repo and push, install on a Mac (which retires the old tools), then try `eww h` for a day.
+2. **Repo, setup script, launcher.** Built, published, and installed on one Mac. Remaining: the fresh VPS test, one day of real use, then archive the old tool repos.
 
 ## Next
 
