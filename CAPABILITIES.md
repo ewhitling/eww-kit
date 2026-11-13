@@ -24,8 +24,8 @@ Tested with `make test` (145 checks in a temporary home folder, with herdr repla
 
 2. **Repo, setup script, launcher.** Built, published, and installed on one Mac. Remaining: the fresh VPS test, one day of real use, then archive the old tool repos.
 3. **Design tokens.** The generator, the Ghostty themes, the Hood palette, and an nvim color scheme are done. Remaining: one day of real use.
-4. **`eww daily`.** Built and tested, with a dry run on the real vault. It adds three passages from `collections/` to the day-note that Obsidian's Daily notes setting names, uses no LLM, and keeps no state outside the vault. Remaining: the first real write, one day of hand use, then a schedule.
-5. **`eww define`.** Built and tested, with a dry run against the real agent. One headless call with no tools writes a definition note: a mechanism line, a plain definition, one Mermaid diagram, and two notes on practice. The reply is checked before it is written. `eww daily` may resurface these definitions. Remaining: the first real note, one day of use, then `eww weekly`.
+4. **`eww daily`.** Built and tested, with a dry run on the real vault. It adds three passages from `collections/` to the day-note that Obsidian's Daily notes setting names, uses no LLM, and keeps no state outside the vault. The first real write was on 2026-11-13. Remaining: one day of hand use, then a schedule.
+5. **`eww define`.** Built and tested, with a dry run against the real agent. One headless call with no tools writes a definition note: a mechanism line, a plain definition, one Mermaid diagram, and two notes on practice. The reply is checked before it is written. `eww daily` may resurface these definitions. The first real note was written on 2026-11-13, and its diagram renders in Obsidian. Remaining: one day of use.
 
 ## Next
 
