@@ -1,0 +1,13 @@
+{
+  "cssTheme": "Atom",
+  "showRibbon": true,
+  "baseFontSize": 16,
+  "showViewHeader": false,
+  "accentColor": "#4e70a6",
+  "enabledCssSnippets": [],
+  "translucency": false,
+  "theme": "system",
+  "floatingNavigation": true,
+  "interfaceFontFamily": "",
+  "baseFontSizeAction": true
+}

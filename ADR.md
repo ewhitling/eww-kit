@@ -140,3 +140,15 @@ This repo is public. Records must not contain personal details, employer names, 
 **Decision.** The generator moves to `tools/themes/build.py` and runs with `make themes`. It is not an `eww` verb. `make test` fails when an export differs from the tokens. Hood moves to `obsidian/plugins/hood/`. The generator writes its palette block; the rest of its CSS stays hand-written. `eww install` copies the plugin into the vault on machines that name one. It copies, not links, because the vault is carried by a sync service. It never touches the plugin's settings file or the list of enabled plugins. Ghostty theme files under `home/` are generator outputs too.
 
 **Consequences.** No new generator and no new Obsidian snippet. Exports are read-only outputs. A token change reaches Obsidian after `make themes` and `eww install`, then travels to other machines by Obsidian Sync. Hood's hand-written rules and its cursor code have no tests in this repo yet.
+
+## ADR 13: Obsidian settings are seeded, never synced
+
+- Date: 2026-11-13
+- Status: Accepted
+
+**Context.** Obsidian rewrites its settings files whenever a setting changes, and a sync service carries them between machines. A new vault still needs a starting place: the settings, the base theme, and the Hood plugin.
+
+**Decision.** `make obsidian-snapshot` copies six settings files from the vault into `obsidian/defaults/`: app, appearance, hotkeys, core plugins, community plugins, and daily notes. Window layout, bookmarks, and plugin data are left out. The snapshot drops CSS snippets whose file is missing and plugins this repo does not ship. The Atom theme is kept in `obsidian/themes/Atom/` with its license. `eww install` copies each of these into the vault only when the vault lacks the file. It never replaces one.
+
+**Consequences.** A setting changed by hand always wins. The defaults go stale until the next snapshot, which is acceptable for a starting place. For a new vault, install must run before Obsidian first opens it, because Obsidian writes its own defaults on first open. Community plugins must still be switched on once per device, because Obsidian keeps that choice outside the vault.
+

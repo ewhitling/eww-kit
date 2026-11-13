@@ -146,8 +146,16 @@ printf 'export KEEP_ME=1\n' >"$EWW_HOME/.zshrc"
 check "existing ~/.zshrc content is kept" grep -q 'KEEP_ME' "$EWW_HOME/.zshrc"
 check "loading line is appended to an existing ~/.zshrc" grep -q '.config/eww/eww.zsh' "$EWW_HOME/.zshrc"
 
-# The Hood plugin is copied into a vault that has an Obsidian folder.
-check "no plugin folder is made in a vault without .obsidian" test ! -e "$WORK/vault/.obsidian"
+# A vault gets starting settings, and files it already has are never replaced.
+check "starting settings are copied into a new vault" cmp -s "$COPY/obsidian/defaults/app.json" "$WORK/vault/.obsidian/app.json"
+check "the Atom theme is copied into a new vault" cmp -s "$COPY/obsidian/themes/Atom/theme.css" "$WORK/vault/.obsidian/themes/Atom/theme.css"
+printf '{"changedByHand": true}\n' >"$WORK/vault/.obsidian/app.json"
+rm "$WORK/vault/.obsidian/hotkeys.json"
+"$COPY/bin/eww-install" >/dev/null 2>&1
+check "a settings file changed by hand is kept" grep -q changedByHand "$WORK/vault/.obsidian/app.json"
+check "a missing settings file is copied again" cmp -s "$COPY/obsidian/defaults/hotkeys.json" "$WORK/vault/.obsidian/hotkeys.json"
+
+# The Hood plugin is copied into the vault, replacing an older copy.
 mkdir -p "$WORK/vault/.obsidian/plugins/hood"
 printf 'old styles\n' >"$WORK/vault/.obsidian/plugins/hood/styles.css"
 printf '{"customCursor": true}\n' >"$WORK/vault/.obsidian/plugins/hood/data.json"

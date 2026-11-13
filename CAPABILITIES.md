@@ -16,8 +16,9 @@ Decisions behind this list are in `ADR.md`.
 - **Leak-check commit hook.** gitleaks plus a private denylist. Fails closed.
 - **Theme generator.** `make themes` writes every house-style export from `skills/house-style/tokens/tokens.json`: CSS, chart styles, Swift, Streamlit, Ghostty themes, the nvim color scheme, and the palette of the Hood plugin for Obsidian. `make test` fails when an export is out of date.
 - **Hood plugin for Obsidian.** Kept in `obsidian/plugins/hood/`. `eww install` copies it into the vault on machines that name one.
+- **Obsidian starting settings.** `make obsidian-snapshot` copies the vault's settings into `obsidian/defaults/`. `eww install` copies them, and the Atom theme, into a vault only where a file is missing.
 
-Tested with `make test` (124 checks in a temporary home folder, with herdr replaced by a stand-in, plus the export check and 13 generator tests), `make lint`, and a trial install into a temporary home using the real vault. Installed for real on one Mac on 2026-11-12; `eww doctor` passes there, and `eww h`, the numbered picker, and the map colors work in real use. Not yet tested: Ubuntu, `setup.sh` end to end, the `fzf` picker. Hood's hand-written CSS rules and cursor code have no tests here.
+Tested with `make test` (127 checks in a temporary home folder, with herdr replaced by a stand-in, plus the export check and 18 generator and snapshot tests), `make lint`, and a trial install into a temporary home using the real vault. Installed for real on one Mac on 2026-11-12; `eww doctor` passes there, and `eww h`, the numbered picker, and the map colors work in real use. Not yet tested: Ubuntu, `setup.sh` end to end, the `fzf` picker. Hood's hand-written CSS rules and cursor code have no tests here.
 
 ## In flight
 

@@ -192,12 +192,37 @@ link_vault_suffixes() {
   ok "vault suffix files linked: $count"
 }
 
+# Give the vault a starting place: the settings in obsidian/defaults/ and the
+# Atom theme. Each file is copied only when the vault does not have it, so
+# settings changed by hand, or carried by a sync service, are never replaced.
+# For a new vault, run install before opening it in Obsidian for the first time.
+seed_obsidian_settings() {
+  [ -n "$VAULT" ] && [ -d "$VAULT" ] || return 0
+  [ -d "$REPO/obsidian/defaults" ] || return 0
+  settings_dir=$VAULT/.obsidian
+  mkdir -p "$settings_dir/themes/Atom"
+  seeded=0
+  for source_file in "$REPO"/obsidian/defaults/*.json "$REPO"/obsidian/themes/Atom/manifest.json "$REPO"/obsidian/themes/Atom/theme.css; do
+    [ -f "$source_file" ] || continue
+    case $source_file in
+      */themes/Atom/*) target_file=$settings_dir/themes/Atom/${source_file##*/} ;;
+      *) target_file=$settings_dir/${source_file##*/} ;;
+    esac
+    [ -e "$target_file" ] && continue
+    cp "$source_file" "$target_file"
+    seeded=$((seeded + 1))
+  done
+  if [ "$seeded" -gt 0 ]; then
+    ok "Obsidian starting settings copied into the vault: $seeded files"
+  fi
+}
+
 # Copy the Hood plugin into the vault's Obsidian plugin folder. The files are
 # copied, not linked, because the vault is carried by a sync service. A file
 # that differs is saved to the backup folder first. The plugin's own settings
 # file (data.json) and the list of enabled plugins are never touched.
 deploy_obsidian_plugin() {
-  [ -n "$VAULT" ] && [ -d "$VAULT/.obsidian" ] || return 0
+  [ -n "$VAULT" ] && [ -d "$VAULT" ] || return 0
   source_dir=$REPO/obsidian/plugins/hood
   target_dir=$VAULT/.obsidian/plugins/hood
   [ -d "$source_dir" ] || return 0
@@ -375,6 +400,7 @@ link_home_files
 ensure_zshrc_line
 link_programs
 link_vault_suffixes
+seed_obsidian_settings
 deploy_obsidian_plugin
 deploy_skills
 build_instructions

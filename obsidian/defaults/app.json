@@ -1,0 +1,18 @@
+{
+  "promptDelete": false,
+  "showLineNumber": false,
+  "vimMode": false,
+  "alwaysUpdateLinks": true,
+  "showUnsupportedFiles": true,
+  "mobileToolbarCommands": [],
+  "attachmentFolderPath": "_meta/assets",
+  "showInlineTitle": false,
+  "showIndentGuide": false,
+  "autoPairMarkdown": false,
+  "propertiesInDocument": "visible",
+  "defaultViewMode": "source",
+  "newFileLocation": "root",
+  "newFileFolderPath": "/",
+  "settingsPopoutWindow": false,
+  "focusNewTab": true
+}
