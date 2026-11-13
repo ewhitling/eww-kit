@@ -91,6 +91,9 @@ if [ -f "$CONFIG/vault" ]; then
       ok "$role: ${vault##*/}"
     else
       bad "$role folder is missing: $vault"
+      case $vault in
+        *\\*) warn "write that path plainly in ~/.config/eww/vault, with no backslashes" ;;
+      esac
     fi
   done <"$CONFIG/vault"
   [ "$vault_number" -gt 0 ] || warn "~/.config/eww/vault is empty, so this machine gets no private files"

@@ -163,3 +163,14 @@ This repo is public. Records must not contain personal details, employer names, 
 
 **Consequences.** Which vaults a machine has is decided by that machine's file and by what is synced to it. A vault that is not listed and not synced cannot leak to that machine. Git identity always follows the primary vault. Nothing in code stops an agent from writing into the wrong vault when two are present. That guard is an instruction in a suffix file on the two-vault machine.
 
+## ADR 15: Day-notes start at the vault root, and eww daily follows Obsidian
+
+- Date: 2026-11-13
+- Status: Accepted. Refines ADR 6 and ADR 7.
+
+**Context.** Day-notes were first created under `journal/<year>/`. The owner wants a new day-note at the vault root, where it is in view. `eww daily` had its own fixed idea of where the day-note lives, so it wrote to a different file from the one Obsidian opened.
+
+**Decision.** New day-notes are created at the vault root, named `YYYY-MM-DD.md`. `journal/<year>/` holds filed ones. `eww daily` reads the folder and date format from Obsidian's Daily notes setting, and supports the YYYY, MM, and DD parts. It reads the 60-day history from any note named `YYYY-MM-DD`, wherever it sits in the vault.
+
+**Consequences.** Obsidian and `eww daily` cannot disagree on the day-note. Filing a day-note into `journal/` does not lose its history. The owner files old day-notes into `journal/<year>/` by hand. No tool moves them, by choice.
+

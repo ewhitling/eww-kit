@@ -16,15 +16,25 @@ fi
 _eww_steady_cursor() { printf '\033[2 q'; }
 (( ${precmd_functions[(I)_eww_steady_cursor]} )) || precmd_functions+=(_eww_steady_cursor)
 
-# vault: change to the notes vault named in ~/.config/eww/vault.
-vault() {
+# vault: change to the primary notes vault, the first line of ~/.config/eww/vault.
+# An alias with the same name would break this file: zsh expands aliases while
+# it reads "vault() {". So any such alias is removed first, and the function
+# is defined with the "function" keyword, which is never alias-expanded.
+unalias vault 2>/dev/null
+function vault {
     local file="$HOME/.config/eww/vault" dir
     if [[ ! -f $file ]]; then
         print -u2 -r -- "vault: no ~/.config/eww/vault on this machine"
         return 1
     fi
     dir=$(head -n 1 "$file")
-    cd "${dir/#\~/$HOME}"
+    dir=${dir/#\~/$HOME}
+    if [[ ! -d $dir ]]; then
+        print -u2 -r -- "vault: folder not found: $dir"
+        [[ $dir == *\\* ]] && print -u2 -r -- "vault: write the path in ~/.config/eww/vault plainly, with no backslashes"
+        return 1
+    fi
+    cd "$dir"
 }
 
 # Private settings for this person, when the vault provides them.

@@ -7,7 +7,8 @@
 """eww daily [--dry-run]
 
 Add a "## Resurfaced" section to today's day-note, holding three passages
-from the vault's collections/ folder. Each passage is a link plus a short
+from the vault's collections/ folder. The day-note is the one Obsidian's
+Daily notes setting names, so the two always agree on where it lives. Each passage is a link plus a short
 excerpt of your own text. No LLM is used, and no state is kept outside the
 vault.
 
@@ -24,6 +25,7 @@ Running it again on the same day changes nothing.
 from __future__ import annotations
 
 import datetime
+import json
 import os
 import random
 import re
@@ -171,11 +173,15 @@ def candidates(vault: Path) -> dict[str, tuple[str, str, list[str]]]:
 
 
 def recently_shown(vault: Path, today: datetime.date, days: int = RECENT_DAYS) -> set[str]:
-    """Links listed under "## Resurfaced" in day-notes from the last `days` days."""
+    """Links listed under "## Resurfaced" in day-notes from the last `days` days.
+
+    A day-note is any note named YYYY-MM-DD, wherever it sits in the vault, so
+    notes that were filed into another folder still count.
+    """
     shown: set[str] = set()
-    for path in (vault / "journal").rglob("*.md"):
+    for path in vault.rglob("*.md"):
         match = DAY_NOTE_NAME.match(path.stem)
-        if not match:
+        if not match or any(part.startswith(".") or part == "_meta" for part in path.relative_to(vault).parts):
             continue
         try:
             date = datetime.date(*(int(part) for part in match.groups()))
@@ -228,8 +234,23 @@ def render_section(passages: list[Passage]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def format_date(pattern: str, date: datetime.date) -> str:
+    """Fill an Obsidian date pattern. Only the YYYY, MM, and DD parts are supported."""
+    filled = pattern.replace("YYYY", f"{date:%Y}").replace("MM", f"{date:%m}").replace("DD", f"{date:%d}")
+    if re.search(r"[A-Za-z]", filled):
+        raise ValueError(f'the Daily notes date format "{pattern}" uses parts other than YYYY, MM, and DD')
+    return filled
+
+
 def day_note_path(vault: Path, today: datetime.date) -> Path:
-    return vault / "journal" / f"{today:%Y}" / f"{today:%Y-%m-%d}.md"
+    """Today's day-note, placed by Obsidian's Daily notes setting. The default is the vault root."""
+    folder, pattern = "", "YYYY-MM-DD"
+    setting = vault / ".obsidian" / "daily-notes.json"
+    if setting.is_file():
+        data = json.loads(setting.read_text())
+        folder = (data.get("folder") or "").strip("/")
+        pattern = data.get("format") or pattern
+    return vault / folder / f"{format_date(pattern, today)}.md"
 
 
 def append_section(note: Path, section: str) -> bool:
@@ -263,7 +284,11 @@ def main(argv: list[str]) -> int:
         return 1
 
     today = datetime.date.today()
-    note = day_note_path(vault, today)
+    try:
+        note = day_note_path(vault, today)
+    except ValueError as error:
+        print(f"✗ eww daily: {error}", file=sys.stderr)
+        return 1
     if not dry_run and note.is_file() and re.search(rf"^{re.escape(SECTION_HEADING)}\s*$", note.read_text(), re.M):
         print(f"✓ today's day-note already has a {SECTION_HEADING[3:]} section")
         return 0
@@ -277,7 +302,7 @@ def main(argv: list[str]) -> int:
         print(section, end="")
         return 0
     append_section(note, section)
-    print(f"✓ added {len(passages)} passages to journal/{today:%Y}/{today:%Y-%m-%d}.md")
+    print(f"✓ added {len(passages)} passages to {note.relative_to(vault).as_posix()}")
     return 0
 
 

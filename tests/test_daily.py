@@ -109,8 +109,26 @@ def test_render_and_append_keep_existing_text_and_run_once(tmp_path: Path) -> No
     assert note.read_text().count("## Resurfaced") == 1
 
 
+def test_day_note_path_follows_the_obsidian_setting(tmp_path: Path) -> None:
+    assert daily.day_note_path(tmp_path, TODAY) == tmp_path / "2026-11-13.md"
+    setting = write(tmp_path / ".obsidian/daily-notes.json", '{"folder": "/", "format": "YYYY-MM-DD"}')
+    assert daily.day_note_path(tmp_path, TODAY) == tmp_path / "2026-11-13.md"
+    setting.write_text('{"folder": "journal", "format": "YYYY/YYYY-MM-DD"}')
+    assert daily.day_note_path(tmp_path, TODAY) == tmp_path / "journal/2026/2026-11-13.md"
+
+
+def test_format_date_rejects_parts_it_does_not_know() -> None:
+    assert daily.format_date("YYYY.MM.DD", TODAY) == "2026.11.13"
+    try:
+        daily.format_date("dddd, MMMM Do", TODAY)
+    except ValueError as error:
+        assert "YYYY, MM, and DD" in str(error)
+    else:
+        raise AssertionError("an unsupported format was accepted")
+
+
 def test_append_creates_a_missing_day_note(tmp_path: Path) -> None:
-    note = daily.day_note_path(tmp_path, TODAY)
+    note = write(tmp_path / ".obsidian/daily-notes.json", '{"folder": "journal", "format": "YYYY/YYYY-MM-DD"}') and daily.day_note_path(tmp_path, TODAY)
     assert note == tmp_path / "journal/2026/2026-11-13.md"
     assert daily.append_section(note, "## Resurfaced\n") is True
     assert note.read_text() == "## Resurfaced\n"
@@ -120,7 +138,10 @@ def test_recently_shown_reads_only_recent_resurfaced_sections(tmp_path: Path) ->
     write(tmp_path / "journal/2026/2026-11-10.md", "## Resurfaced\n\n- [[collections/book/Alpha|Alpha]] (book)\n\n## Other\n- [[collections/quote/Beta]]\n")
     write(tmp_path / "journal/2026/2026-08-01.md", "## Resurfaced\n\n- [[collections/article/Delta|Delta]] (article)\n")
     write(tmp_path / "journal/2026/notes.md", "## Resurfaced\n\n- [[collections/definition/Gamma]]\n")
-    assert daily.recently_shown(tmp_path, TODAY) == {"collections/book/Alpha"}
+    write(tmp_path / "2026-11-12.md", "## Resurfaced\n\n- [[collections/quote/Beta|Beta]] (quote)\n")
+    write(tmp_path / "_meta/archive/2026-11-11.md", "## Resurfaced\n\n- [[collections/definition/Gamma]]\n")
+    # A day-note counts wherever it sits: at the root or filed in a folder. _meta is not read.
+    assert daily.recently_shown(tmp_path, TODAY) == {"collections/book/Alpha", "collections/quote/Beta"}
 
 
 def test_main_writes_once_and_dry_run_writes_nothing(tmp_path: Path, monkeypatch, capsys) -> None:

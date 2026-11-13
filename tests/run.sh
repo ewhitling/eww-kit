@@ -237,6 +237,22 @@ check "eww help <verb> shows that verb's help" sh -c "'$COPY/bin/eww' help insta
 check "unknown verb exits 1" sh -c "'$COPY/bin/eww' nonsense; test \$? -eq 1"
 check "unknown verb names the verb" sh -c "'$COPY/bin/eww' nonsense 2>&1 | grep -q 'unknown command \"nonsense\"'"
 
+# --- shell settings --------------------------------------------------------
+# The real settings file must load even when an alias named "vault" exists.
+if command -v zsh >/dev/null 2>&1; then
+  ZSH_HOME=$WORK/zsh-home
+  mkdir -p "$ZSH_HOME/.config/eww" "$ZSH_HOME/my notes"
+  printf '%s\n' "$ZSH_HOME/my notes" >"$ZSH_HOME/.config/eww/vault"
+  # Loading must print nothing: a parse error would show up as a message.
+  loading=$(HOME=$ZSH_HOME zsh -f -c "setopt aliases; alias vault='cd /tmp'; source '$REPO/home/.config/eww/eww.zsh'" 2>&1 || true)
+  check "shell settings load despite an alias named vault" test -z "$loading"
+  check "the vault command replaces the alias" sh -c "[ \"\$(HOME='$ZSH_HOME' zsh -f -c \"setopt aliases; alias vault='cd /tmp'; source '$REPO/home/.config/eww/eww.zsh'; eval vault; pwd -P\" 2>/dev/null)\" = \"\$(cd '$ZSH_HOME/my notes' && pwd -P)\" ]"
+  printf '%s\n' "$ZSH_HOME/my\\ notes" >"$ZSH_HOME/.config/eww/vault"
+  check "a path with backslashes gets a clear message" sh -c "HOME='$ZSH_HOME' zsh -f -c \"source '$REPO/home/.config/eww/eww.zsh'; vault\" 2>&1 | grep -q 'no backslashes'"
+else
+  printf 'SKIP: shell settings tests (zsh is not installed)\n'
+fi
+
 # --- doctor ----------------------------------------------------------------
 doctor=$(PATH=$PATH_FOR_TEST "$COPY/bin/eww-doctor" 2>&1) || true
 check "doctor sees the linked programs" contains "$doctor" "programs linked"
