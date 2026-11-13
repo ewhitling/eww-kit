@@ -8,7 +8,8 @@ case ${1:-} in
     cat <<'HELP'
 eww doctor
 
-Check that this machine is set up. It changes nothing.
+Check that this machine is set up, and whether the published repo has
+newer commits. It changes nothing. The update check needs the network.
 
   ✓  the check passed
   !  optional, or worth a look
@@ -113,6 +114,29 @@ if [ -f "$CONFIG/denylist.txt" ]; then
 else
   ok "no denylist on this machine, so it is treated as pull-only"
 fi
+
+# Is this checkout behind the published repo? The remote is asked for its
+# newest commit, and nothing is fetched or changed. A slow or missing network
+# is reported and does not count as broken.
+check_for_updates() {
+  git -C "$REPO" rev-parse --git-dir >/dev/null 2>&1 || return 0
+  branch=$(git -C "$REPO" branch --show-current 2>/dev/null || true)
+  [ -n "$branch" ] || return 0
+  remote_commit=$(git -C "$REPO" -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=5 \
+    ls-remote --quiet origin "refs/heads/$branch" 2>/dev/null | cut -f1) || remote_commit=''
+  if [ -z "$remote_commit" ]; then
+    warn "could not ask the remote for updates"
+    return 0
+  fi
+  if [ "$remote_commit" = "$(git -C "$REPO" rev-parse HEAD)" ]; then
+    ok "up to date with the remote"
+  elif git -C "$REPO" merge-base --is-ancestor "$remote_commit" HEAD 2>/dev/null; then
+    warn "this machine has commits that are not pushed"
+  else
+    warn "the remote has newer commits (run eww update)"
+  fi
+}
+check_for_updates
 
 if [ "$broken" -gt 0 ]; then
   printf '\n%s check(s) broken\n' "$broken"

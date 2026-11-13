@@ -223,7 +223,15 @@ git clone -q "$ORIGIN" "$CLONE"
 CLONE=$(cd "$CLONE" && pwd -P)
 printf '# Base instructions, updated\n' >"$ORIGIN/instructions/base.md"
 git -C "$ORIGIN" -c user.name=t -c user.email=t@example.com commit -q -am change
+check "doctor reports a newer remote" sh -c "PATH='$PATH_FOR_TEST' '$CLONE/bin/eww-doctor' | grep -q 'run eww update'"
 check "update pulls and installs" "$CLONE/bin/eww-update"
+check "doctor reports up to date after an update" sh -c "PATH='$PATH_FOR_TEST' '$CLONE/bin/eww-doctor' | grep -q 'up to date with the remote'"
+git -C "$CLONE" -c user.name=t -c user.email=t@example.com commit -q --allow-empty -m local
+check "doctor reports commits that are not pushed" sh -c "PATH='$PATH_FOR_TEST' '$CLONE/bin/eww-doctor' | grep -q 'not pushed'"
+git -C "$CLONE" reset -q --hard HEAD~1
+git -C "$CLONE" remote set-url origin "$WORK/no-such-remote"
+check "doctor survives an unreachable remote" sh -c "PATH='$PATH_FOR_TEST' '$CLONE/bin/eww-doctor' | grep -q 'could not ask the remote'"
+git -C "$CLONE" remote set-url origin "$ORIGIN"
 check "update brings the new base into the instructions" grep -q 'Base instructions, updated' "$EWW_HOME/.claude/CLAUDE.md"
 check "update relinks programs to the pulled checkout" is_link_to "$EWW_HOME/.local/bin/eww" "$CLONE/bin/eww"
 
