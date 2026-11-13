@@ -22,10 +22,13 @@ Install everything from this repo into the home folder. Safe to run again.
      plus every file in ~/.config/eww/suffixes/
   5. Install the leak-check commit hook, where ~/.config/eww/denylist.txt exists
 
-If ~/.config/eww/vault holds the path of the notes vault, private content
-comes from the vault's _meta/eww/ folder:
-  - files under home/ there are linked into ~ and win over this repo's files
-  - suffix files there are linked into ~/.config/eww/suffixes/
+~/.config/eww/vault may list notes vaults, one path per line. The first line
+is the primary vault. Private content comes from a vault's _meta/eww/ folder:
+  - files under home/ in the primary vault are linked into ~ and win over
+    this repo's files. Other vaults never supply home files.
+  - suffix files in every listed vault are linked into ~/.config/eww/suffixes/
+  - every listed vault gets Obsidian starting settings, where a file is
+    missing, and the Hood plugin
 
 An existing file that eww did not create is moved to
 ~/.local/state/eww/backup/<time>/ before it is replaced.
@@ -117,15 +120,28 @@ link_tree() {
   ok "$label linked: $count"
 }
 
-# The vault path for this machine, or nothing when ~/.config/eww/vault is absent.
-vault_path() {
+# Every vault listed in ~/.config/eww/vault, one per line. The first is the primary.
+# Prints nothing when the file is absent.
+vault_paths() {
   [ -f "$CONFIG/vault" ] || return 0
-  vault=$(head -n 1 "$CONFIG/vault")
-  # shellcheck disable=SC2088  # a literal "~/" read from the file is expanded here by hand
-  case $vault in
-    "~/"*) vault=$EWW_HOME/${vault#"~/"} ;;
-  esac
-  printf '%s\n' "$vault"
+  while IFS= read -r vault || [ -n "$vault" ]; do
+    [ -n "$vault" ] || continue
+    # shellcheck disable=SC2088  # a literal "~/" read from the file is expanded here by hand
+    case $vault in
+      "~/"*) vault=$EWW_HOME/${vault#"~/"} ;;
+    esac
+    printf '%s\n' "$vault"
+  done <"$CONFIG/vault"
+}
+
+# Run a function once for every listed vault, with the vault folder as its argument.
+for_each_vault() {
+  vault_list=$(mktemp)
+  vault_paths >"$vault_list"
+  while IFS= read -r listed_vault; do
+    "$1" "$listed_vault"
+  done <"$vault_list"
+  rm -f "$vault_list"
 }
 
 # Step 1: shared files from home/ in this repo, and private files from the
@@ -134,7 +150,7 @@ link_home_files() {
   private_home=''
   if [ -n "$VAULT" ] && [ -d "$VAULT/_meta/eww/home" ]; then
     private_home=$VAULT/_meta/eww/home
-    link_tree "$private_home" "private home files from the vault"
+    link_tree "$private_home" "private home files from the primary vault"
   fi
   link_tree "$REPO/home" "home files" "$private_home"
 }
@@ -169,27 +185,34 @@ link_programs() {
   ok "programs linked into ~/.local/bin: $count"
 }
 
-# Optional: ~/.config/eww/vault holds the path of the notes vault on this machine.
-# When it exists, every suffix file in the vault's _meta/eww/ folder is linked
-# into the suffix folder. A machine with no such file gets no vault suffixes.
+# Link every suffix file in one vault's _meta/eww/ folder into the suffix folder.
+# When two vaults hold a suffix with the same name, the vault listed first wins.
+link_suffixes_from() {
+  [ -d "$1/_meta/eww" ] || return 0
+  for suffix in "$1"/_meta/eww/*.md "$1"/_meta/eww/skills/*.md; do
+    [ -f "$suffix" ] || continue
+    case $suffix in
+      */_meta/eww/skills/*) target=$CONFIG/suffixes/skills/${suffix##*/} ;;
+      *) target=$CONFIG/suffixes/${suffix##*/} ;;
+    esac
+    case $linked_suffixes in
+      *"|$target|"*)
+        warn "suffix ${suffix##*/} exists in two vaults. The vault listed first is used."
+        continue
+        ;;
+    esac
+    linked_suffixes="$linked_suffixes$target|"
+    link "$suffix" "$target"
+    suffix_count=$((suffix_count + 1))
+  done
+}
+
 link_vault_suffixes() {
   [ -f "$CONFIG/vault" ] || return 0
-  if [ ! -d "$VAULT/_meta/eww" ]; then
-    warn "no _meta/eww folder in the vault named by ~/.config/eww/vault"
-    return 0
-  fi
-  count=0
-  for suffix in "$VAULT"/_meta/eww/*.md; do
-    [ -f "$suffix" ] || continue
-    link "$suffix" "$CONFIG/suffixes/${suffix##*/}"
-    count=$((count + 1))
-  done
-  for suffix in "$VAULT"/_meta/eww/skills/*.md; do
-    [ -f "$suffix" ] || continue
-    link "$suffix" "$CONFIG/suffixes/skills/${suffix##*/}"
-    count=$((count + 1))
-  done
-  ok "vault suffix files linked: $count"
+  suffix_count=0
+  linked_suffixes='|'
+  for_each_vault link_suffixes_from
+  ok "vault suffix files linked: $suffix_count"
 }
 
 # Give the vault a starting place: the settings in obsidian/defaults/ and the
@@ -197,9 +220,9 @@ link_vault_suffixes() {
 # settings changed by hand, or carried by a sync service, are never replaced.
 # For a new vault, run install before opening it in Obsidian for the first time.
 seed_obsidian_settings() {
-  [ -n "$VAULT" ] && [ -d "$VAULT" ] || return 0
+  [ -d "$1" ] || return 0
   [ -d "$REPO/obsidian/defaults" ] || return 0
-  settings_dir=$VAULT/.obsidian
+  settings_dir=$1/.obsidian
   mkdir -p "$settings_dir/themes/Atom"
   seeded=0
   for source_file in "$REPO"/obsidian/defaults/*.json "$REPO"/obsidian/themes/Atom/manifest.json "$REPO"/obsidian/themes/Atom/theme.css; do
@@ -213,7 +236,7 @@ seed_obsidian_settings() {
     seeded=$((seeded + 1))
   done
   if [ "$seeded" -gt 0 ]; then
-    ok "Obsidian starting settings copied into the vault: $seeded files"
+    ok "Obsidian starting settings copied into ${1##*/}: $seeded files"
   fi
 }
 
@@ -222,9 +245,9 @@ seed_obsidian_settings() {
 # that differs is saved to the backup folder first. The plugin's own settings
 # file (data.json) and the list of enabled plugins are never touched.
 deploy_obsidian_plugin() {
-  [ -n "$VAULT" ] && [ -d "$VAULT" ] || return 0
+  [ -d "$1" ] || return 0
   source_dir=$REPO/obsidian/plugins/hood
-  target_dir=$VAULT/.obsidian/plugins/hood
+  target_dir=$1/.obsidian/plugins/hood
   [ -d "$source_dir" ] || return 0
   mkdir -p "$target_dir"
   copied=0
@@ -233,17 +256,17 @@ deploy_obsidian_plugin() {
       continue
     fi
     if [ -e "$target_dir/$name" ]; then
-      mkdir -p "$BACKUP_DIR/vault-obsidian-hood"
-      cp "$target_dir/$name" "$BACKUP_DIR/vault-obsidian-hood/$name"
+      mkdir -p "$BACKUP_DIR/obsidian-hood/${1##*/}"
+      cp "$target_dir/$name" "$BACKUP_DIR/obsidian-hood/${1##*/}/$name"
       backed_up=$((backed_up + 1))
     fi
     cp "$source_dir/$name" "$target_dir/$name"
     copied=$((copied + 1))
   done
   if [ "$copied" -gt 0 ]; then
-    ok "Hood plugin copied into the vault: $copied files. Reload Obsidian to see changes."
+    ok "Hood plugin copied into ${1##*/}: $copied files. Reload Obsidian to see changes."
   else
-    ok "Hood plugin in the vault is current"
+    ok "Hood plugin in ${1##*/} is current"
   fi
 }
 
@@ -395,13 +418,14 @@ install_hook() {
 }
 
 failed_skills=0
-VAULT=$(vault_path)
+# The primary vault is the first one listed. Only it supplies private home files.
+VAULT=$(vault_paths | head -n 1)
 link_home_files
 ensure_zshrc_line
 link_programs
 link_vault_suffixes
-seed_obsidian_settings
-deploy_obsidian_plugin
+for_each_vault seed_obsidian_settings
+for_each_vault deploy_obsidian_plugin
 deploy_skills
 build_instructions
 install_hook

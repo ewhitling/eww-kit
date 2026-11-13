@@ -152,3 +152,14 @@ This repo is public. Records must not contain personal details, employer names, 
 
 **Consequences.** A setting changed by hand always wins. The defaults go stale until the next snapshot, which is acceptable for a starting place. For a new vault, install must run before Obsidian first opens it, because Obsidian writes its own defaults on first open. Community plugins must still be switched on once per device, because Obsidian keeps that choice outside the vault.
 
+## ADR 14: A machine may list several vaults
+
+- Date: 2026-11-13
+- Status: Accepted. Extends ADR 11.
+
+**Context.** ADR 11 let a machine name one vault. One machine needs two: a vault that must stay on that machine, and the personal vault. Other machines must hold only the personal vault. Naming the personal vault on the two-vault machine would have linked its private home files, including git identity, over that machine's own.
+
+**Decision.** `~/.config/eww/vault` holds one vault path per line. The first line is the primary vault. Only the primary supplies private home files. Every listed vault supplies suffix files, and gets the Obsidian starting settings and the Hood plugin. When two vaults hold a suffix with the same name, the vault listed first wins and install reports it. `eww h vault`, `eww daily`, and the `vault` shell command use the primary. `eww h NAME` opens any listed vault by its folder name.
+
+**Consequences.** Which vaults a machine has is decided by that machine's file and by what is synced to it. A vault that is not listed and not synced cannot leak to that machine. Git identity always follows the primary vault. Nothing in code stops an agent from writing into the wrong vault when two are present. That guard is an instruction in a suffix file on the two-vault machine.
+

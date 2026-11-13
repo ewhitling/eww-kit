@@ -77,7 +77,23 @@ if [ -f "$REPO/home/.config/eww/eww.zsh" ]; then
   fi
 fi
 if [ -f "$CONFIG/vault" ]; then
-  ok "vault configured, so private files and suffixes come from it"
+  # One vault per line. The first is the primary, the only one that supplies home files.
+  vault_number=0
+  while IFS= read -r vault || [ -n "$vault" ]; do
+    [ -n "$vault" ] || continue
+    case $vault in
+      "~/"*) vault=$EWW_HOME/${vault#"~/"} ;;
+    esac
+    vault_number=$((vault_number + 1))
+    role=vault
+    [ "$vault_number" -eq 1 ] && role="primary vault"
+    if [ -d "$vault" ]; then
+      ok "$role: ${vault##*/}"
+    else
+      bad "$role folder is missing: $vault"
+    fi
+  done <"$CONFIG/vault"
+  [ "$vault_number" -gt 0 ] || warn "~/.config/eww/vault is empty, so this machine gets no private files"
 else
   warn "no ~/.config/eww/vault, so this machine gets no private files"
 fi

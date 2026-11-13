@@ -17,9 +17,10 @@ With no TARGET:
   anywhere else       show a picker
 
 TARGET is one of:
-  vault               the notes vault named in ~/.config/eww/vault
-  NAME                a repo folder in ~/Developer, or a folder in the
-                      vault's projects/
+  vault               the primary notes vault: the first line of
+                      ~/.config/eww/vault
+  NAME                a repo folder in ~/Developer, a listed vault's folder
+                      name, or a folder in a vault's projects/
 
 Running it again for the same project focuses the existing workspace.
 `eww h stop` stops the herdr server.
@@ -63,46 +64,69 @@ fail() {
   exit 1
 }
 
-# The vault path for this machine, or nothing when ~/.config/eww/vault is absent.
-vault_path() {
+# Every vault listed in ~/.config/eww/vault, one per line. The first is the primary.
+vault_paths() {
   [ -f "$CONFIG/vault" ] || return 0
-  vault=$(head -n 1 "$CONFIG/vault")
-  case $vault in
-    "~/"*) vault=$EWW_HOME/${vault#"~/"} ;;
-  esac
-  printf '%s\n' "$vault"
+  while IFS= read -r vault || [ -n "$vault" ]; do
+    [ -n "$vault" ] || continue
+    case $vault in
+      "~/"*) vault=$EWW_HOME/${vault#"~/"} ;;
+    esac
+    printf '%s\n' "$vault"
+  done <"$CONFIG/vault"
 }
-VAULT=$(vault_path)
+VAULTS=$(vault_paths)
+VAULT=$(printf '%s\n' "$VAULTS" | head -n 1)
 
-# Every place a workspace can open, one per line: "label<TAB>folder".
+# The places a workspace can open, one per line: "label<TAB>folder".
 # The type word carries the color: vault magenta, repo blue, project dim.
 # The folder after the tab stays plain, so matching on it is not affected.
-candidates() {
-  if [ -n "$VAULT" ] && [ -d "$VAULT" ]; then
-    printf '%svault%s    %s%s%s\n' "$magenta" "$reset" "${VAULT##*/}" "$TAB" "$VAULT"
-  fi
+vault_candidates() {
+  [ -n "$VAULTS" ] || return 0
+  printf '%s\n' "$VAULTS" | while IFS= read -r dir; do
+    [ -d "$dir" ] || continue
+    printf '%svault%s    %s%s%s\n' "$magenta" "$reset" "${dir##*/}" "$TAB" "$dir"
+  done
+}
+
+repo_candidates() {
   for dir in "$REPOS_DIR"/*/; do
     [ -e "${dir}.git" ] || continue
     dir=${dir%/}
     printf '%srepo%s     %s%s%s\n' "$accent" "$reset" "${dir##*/}" "$TAB" "$dir"
   done
-  if [ -n "$VAULT" ] && [ -d "$VAULT/projects" ]; then
-    for dir in "$VAULT"/projects/*/; do
+}
+
+project_candidates() {
+  [ -n "$VAULTS" ] || return 0
+  printf '%s\n' "$VAULTS" | while IFS= read -r vault_dir; do
+    [ -d "$vault_dir/projects" ] || continue
+    for dir in "$vault_dir"/projects/*/; do
       [ -d "$dir" ] || continue
       dir=${dir%/}
       printf '%sproject%s  %s%s%s\n' "$dim" "$reset" "${dir##*/}" "$TAB" "$dir"
     done
-  fi
+  done
 }
 
-# Print the folder for a name. Repos are matched before vault projects.
+candidates() {
+  vault_candidates
+  repo_candidates
+  project_candidates
+}
+
+# Print the folder for a name. "vault" is the primary vault. Otherwise a repo
+# is matched first, then a vault's folder name, then a vault project.
 resolve_name() {
   if [ "$1" = vault ]; then
     printf '%s\n' "$VAULT"
     return 0
   fi
-  candidates | while IFS="$TAB" read -r _ dir; do
-    [ "$dir" = "$VAULT" ] && continue
+  {
+    repo_candidates
+    vault_candidates
+    project_candidates
+  } | while IFS="$TAB" read -r _ dir; do
     if [ "${dir##*/}" = "$1" ]; then
       printf '%s\n' "$dir"
       break
@@ -153,7 +177,7 @@ target_dir() {
       fail "no vault on this machine: ~/.config/eww/vault is missing"
     fi
     dir=$(resolve_name "$1")
-    [ -n "$dir" ] || fail "\"$1\" is not a repo in $REPOS_DIR or a project in the vault. Run eww h for the picker."
+    [ -n "$dir" ] || fail "\"$1\" is not a repo in $REPOS_DIR, a vault, or a vault project. Run eww h for the picker."
     printf '%s\n' "$dir"
   elif dir=$(git rev-parse --show-toplevel 2>/dev/null); then
     printf '%s\n' "$dir"

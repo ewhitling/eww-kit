@@ -170,6 +170,32 @@ files_before=$(find "$EWW_HOME/.local/state/eww/backup" | wc -l)
 "$COPY/bin/eww-install" >/dev/null 2>&1
 check "Hood copy is stable across runs" test "$files_before" -eq "$(find "$EWW_HOME/.local/state/eww/backup" | wc -l)"
 
+# A second vault: it supplies suffixes and gets Obsidian files, but never home files.
+mkdir -p "$WORK/second/_meta/eww/home" "$WORK/second/_meta/eww/skills"
+printf 'from the second vault\n' >"$WORK/second/_meta/eww/home/.secondrc"
+printf '## From the second vault\n' >"$WORK/second/_meta/eww/50-second.md"
+printf '## Clash, second copy\n' >"$WORK/second/_meta/eww/40-vault.md"
+printf '%s\n\n%s\n' "$WORK/vault" "$WORK/second" >"$EWW_HOME/.config/eww/vault"
+two_vaults=$("$COPY/bin/eww-install" 2>&1) || true
+check "a second vault's suffix is linked" is_link_to "$EWW_HOME/.config/eww/suffixes/50-second.md" "$WORK/second/_meta/eww/50-second.md"
+check "a second vault's suffix reaches the instructions" grep -q 'From the second vault' "$EWW_HOME/.claude/CLAUDE.md"
+check "the first vault wins a suffix name clash" is_link_to "$EWW_HOME/.config/eww/suffixes/40-vault.md" "$WORK/vault/_meta/eww/40-vault.md"
+check "a suffix name clash is reported" contains "$two_vaults" "exists in two vaults"
+check "a second vault never supplies home files" test ! -e "$EWW_HOME/.secondrc"
+check "a second vault gets starting settings" cmp -s "$COPY/obsidian/defaults/app.json" "$WORK/second/.obsidian/app.json"
+check "a second vault gets the Hood plugin" cmp -s "$COPY/obsidian/plugins/hood/styles.css" "$WORK/second/.obsidian/plugins/hood/styles.css"
+two_doctor=$("$COPY/bin/eww-doctor" 2>&1) || true
+check "doctor names the primary vault" contains "$two_doctor" "primary vault: vault"
+check "doctor names the second vault" contains "$two_doctor" "✓ vault: second"
+# Listed the other way round, the second vault becomes the primary and supplies home files.
+printf '%s\n%s\n' "$WORK/second" "$WORK/vault" >"$EWW_HOME/.config/eww/vault"
+"$COPY/bin/eww-install" >/dev/null 2>&1
+check "the vault listed first supplies home files" is_link_to "$EWW_HOME/.secondrc" "$WORK/second/_meta/eww/home/.secondrc"
+rm -f "$EWW_HOME/.secondrc" "$EWW_HOME/.config/eww/suffixes/50-second.md"
+rm -rf "$WORK/second"
+printf '%s\n' "$WORK/vault" >"$EWW_HOME/.config/eww/vault"
+"$COPY/bin/eww-install" >/dev/null 2>&1
+
 printf '%s\n' "$WORK/no-such-vault" >"$EWW_HOME/.config/eww/vault"
 check "a missing vault does not stop install" "$COPY/bin/eww-install"
 rm "$EWW_HOME/.config/eww/vault"
@@ -299,7 +325,8 @@ mkdir -p "$EWW_REPOS_DIR/demo-repo/sub" "$EWW_REPOS_DIR/my.repo" "$EWW_REPOS_DIR
 git -C "$EWW_REPOS_DIR/demo-repo" init -q
 git -C "$EWW_REPOS_DIR/my.repo" init -q
 REPOS_REAL=$(cd "$EWW_REPOS_DIR" && pwd -P)
-printf '%s\n' "$WORK/vault2" >"$EWW_HOME/.config/eww/vault"
+mkdir -p "$WORK/vault3/projects/other-project"
+printf '%s\n%s\n' "$WORK/vault2" "$WORK/vault3" >"$EWW_HOME/.config/eww/vault"
 run_h() { (PATH="$STUB:$PATH" HERDR_PANE_ID=inside "$COPY/bin/eww-h" "$@"); }
 logged() { grep -q -F -- "$1" "$HERDR_LOG"; }
 
@@ -326,6 +353,15 @@ if command -v jq >/dev/null 2>&1; then
   : >"$HERDR_LOG"
   check "h vault opens the vault" run_h vault
   check "the vault folder is used" logged "workspace create --cwd $WORK/vault2 --label vault2"
+
+  : >"$HERDR_LOG"
+  check "h NAME opens a second vault by its folder name" run_h vault3
+  check "the second vault folder is used" logged "workspace create --cwd $WORK/vault3 --label vault3"
+  check "h NAME opens the primary vault by its folder name" run_h vault2
+
+  : >"$HERDR_LOG"
+  check "h NAME finds a project in a second vault" run_h other-project
+  check "the second vault's project folder is used" logged "--cwd $WORK/vault3/projects/other-project --label other-project"
 
   : >"$HERDR_LOG"
   check "h NAME finds a vault project" run_h side-project
