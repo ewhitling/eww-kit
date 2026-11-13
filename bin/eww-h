@@ -50,9 +50,10 @@ TAB=$(printf '\t')
 
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && [ -z "${EWW_NO_COLOR:-}" ] && [ "${TERM:-}" != dumb ]; then
   green=$(printf '\033[32m') yellow=$(printf '\033[33m') red=$(printf '\033[31m')
-  accent=$(printf '\033[34m') reset=$(printf '\033[0m')
+  accent=$(printf '\033[34m') magenta=$(printf '\033[35m') dim=$(printf '\033[2m')
+  reset=$(printf '\033[0m')
 else
-  green='' yellow='' red='' accent='' reset=''
+  green='' yellow='' red='' accent='' magenta='' dim='' reset=''
 fi
 ok() { printf '%s✓%s %s\n' "$green" "$reset" "$1"; }
 step() { printf '%s→%s %s\n' "$accent" "$reset" "$1"; }
@@ -74,20 +75,22 @@ vault_path() {
 VAULT=$(vault_path)
 
 # Every place a workspace can open, one per line: "label<TAB>folder".
+# The type word carries the color: vault magenta, repo blue, project dim.
+# The folder after the tab stays plain, so matching on it is not affected.
 candidates() {
   if [ -n "$VAULT" ] && [ -d "$VAULT" ]; then
-    printf 'vault    %s%s%s\n' "${VAULT##*/}" "$TAB" "$VAULT"
+    printf '%svault%s    %s%s%s\n' "$magenta" "$reset" "${VAULT##*/}" "$TAB" "$VAULT"
   fi
   for dir in "$REPOS_DIR"/*/; do
     [ -e "${dir}.git" ] || continue
     dir=${dir%/}
-    printf 'repo     %s%s%s\n' "${dir##*/}" "$TAB" "$dir"
+    printf '%srepo%s     %s%s%s\n' "$accent" "$reset" "${dir##*/}" "$TAB" "$dir"
   done
   if [ -n "$VAULT" ] && [ -d "$VAULT/projects" ]; then
     for dir in "$VAULT"/projects/*/; do
       [ -d "$dir" ] || continue
       dir=${dir%/}
-      printf 'project  %s%s%s\n' "${dir##*/}" "$TAB" "$dir"
+      printf '%sproject%s  %s%s%s\n' "$dim" "$reset" "${dir##*/}" "$TAB" "$dir"
     done
   fi
 }
@@ -98,8 +101,8 @@ resolve_name() {
     printf '%s\n' "$VAULT"
     return 0
   fi
-  candidates | while IFS="$TAB" read -r label dir; do
-    case $label in vault*) continue ;; esac
+  candidates | while IFS="$TAB" read -r _ dir; do
+    [ "$dir" = "$VAULT" ] && continue
     if [ "${dir##*/}" = "$1" ]; then
       printf '%s\n' "$dir"
       break
@@ -135,7 +138,7 @@ pick() {
   list=$(candidates)
   [ -n "$list" ] || fail "nothing to open: no repos in $REPOS_DIR and no vault configured"
   if command -v fzf >/dev/null 2>&1; then
-    line=$(printf '%s\n' "$list" | fzf --delimiter="$TAB" --with-nth=1 --prompt='eww h> ' --height=40% --reverse) || return 1
+    line=$(printf '%s\n' "$list" | fzf --ansi --delimiter="$TAB" --with-nth=1 --prompt='eww h> ' --height=40% --reverse) || return 1
   else
     line=$(printf '%s\n' "$list" | numbered_select) || return 1
   fi
