@@ -29,6 +29,7 @@ def make_vault(root: Path) -> Path:
     write(root / "collections/definition/Gamma.md", f"# Gamma\n\n{LONG}\n")
     write(root / "collections/article/Delta.md", f"# Delta\n\n{LONG}\n")
     write(root / "collections/ttrpg/Campaign.md", f"# Campaign\n\n{LONG}\n")
+    write(root / "collections/_important/Record.md", f"# Record\n\n{LONG}\n")
     write(root / "collections/book/Hidden.md", f"# Hidden\n#no-resurface\n\n{LONG}\n")
     write(root / "collections/book/Machine.md", f"# Machine\n#llm-generated\n\n{LONG}\n")
     write(root / "collections/book/Empty.md", "# Empty\n\n- short\n")

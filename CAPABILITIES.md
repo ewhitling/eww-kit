@@ -4,7 +4,7 @@ Decisions behind this list are in `ADR.md`.
 
 ## Now
 
-- **Notes cutover.** Applied on 2026-11-12. The Obsidian vault is the record. Awaiting one day of real use.
+- **Notes cutover.** Applied on 2026-11-12. The Obsidian vault is the record. On 2026-11-13 properties were removed from 623 notes: topics are inline tags, and no tool writes a properties block.
 - **Launcher.** `eww` prints the map of every `eww-<verb>` program it finds and runs them. Aliases are symlinks.
 - **Private files from the vault.** `~/.config/eww/vault` lists one vault per line. The first is the primary and supplies private home files. Every listed vault supplies suffixes from its `_meta/eww/` folder.
 - **Shared settings.** zsh settings, the starship prompt, the nvim config, Ghostty settings, and a global git ignore file are in `home/`.

@@ -185,3 +185,14 @@ This repo is public. Records must not contain personal details, employer names, 
 
 **Consequences.** A web page cannot make the agent act, and the agent cannot invent a source. The agent may use background knowledge to say what a concept is, but what happened this week must come from the article text. Some sites refuse article requests from a script. For those, the feed's own text is used, and no browser is imitated to get around the refusal. A source that gives titles only, with articles as PDF files, rarely yields a concept. The first run on a page source includes older items, because nothing is listed yet. A page that does not list its newest work first is a poor source; a feed is better.
 
+## ADR 17: Notes carry no properties
+
+- Date: 2026-11-13
+- Status: Accepted. Refines ADR 6.
+
+**Context.** The notes cutover wrote a properties block (YAML front matter) on most notes: topic tags, a creation date, a project kind, and an importance mark. The owner wants one way to sort and one way to filter. The stored creation dates turned out to be import dates, with over half of them on a single day, so they recorded little.
+
+**Decision.** Folders are the primary sort. Inline tags carry topics, as `#topic/<name>` on a line under the title. Notes carry no properties block, and no tool or agent writes one. A one-time migration moved topic tags inline and removed the creation date and the project kind with no replacement. Notes marked important moved to `collections/_important/`, which `eww daily` never reads. An Excalidraw drawing keeps its property, because the plugin needs it.
+
+**Consequences.** One mechanism fewer, and tags are plain text that any editor keeps. Notes cannot be sorted by a stored date, and database views that work on properties are not available. Alternate note names (aliases) are not available either. How a lab project is marked is left to the Lab design session. The vault backup taken before the migration holds every original block.
+
