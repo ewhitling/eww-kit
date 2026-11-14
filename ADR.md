@@ -95,7 +95,7 @@ This repo is public. Records must not contain personal details, employer names, 
 ## ADR 9: Lab is parked, Studio needs no new code
 
 - Date: 2026-11-12
-- Status: Accepted
+- Status: Accepted. The Lab design session ran on 2026-11-13: see ADR 19.
 
 **Context.** The Lab is the flagship capability but depends on the foundations. Past Lab work produced much one-off code and few reusable capabilities.
 
@@ -207,3 +207,17 @@ This repo is public. Records must not contain personal details, employer names, 
 
 **Consequences.** Pi cannot fetch from the network, so `eww update` and `eww weekly` are run by a person or from Claude, not from inside Pi. The guard scans command text and is not an operating-system sandbox, so a determined command can evade it. A convenience extension that aliased the exit command was not restored.
 
+## ADR 19: The Lab is a contract proved by hand before any eww code
+
+- Date: 2026-11-13
+- Status: Accepted. Refines ADR 9. Settles the question ADR 17 left open.
+
+**Context.** Earlier lab work stalled. The cause was not missing analysis skills. A model settled interpretations that the owner never observed or chose, and too much was generated with no overall view. Earlier versions of this toolkit also built tooling before use.
+
+**Decision.** The Lab exists so the owner learns concepts, methods, and insights. The unit of work is a discovery. The agent builds instruments freely. One test decides when to stop: if a choice changes what counts as evidence or how a result is read, the owner and the agent decide together. The owner reads a small set of real instances before any measurement runs at scale. A technique new to the owner is taught on a small example first. At a method choice the agent presents two or three researched options and offers a one-line concept check. The owner reads a result first, and the agent then gives a competing reading. An LLM may be an instrument only as a gated choice, with outputs tied to quotes and a sample checked by hand.
+
+The record is one plain Markdown card per idea, in the project repo. States: incubating, observing, testing, settled, parked. A settled card records supported, contradicted, or unclear, with the belief before and after. Each test is one Makefile command that rebuilds its result from the data and stated assumptions. Every session opens with a map built from the cards. A lab project is marked by a `LAB.md` contract file in its repo, with no marker in the notes vault. Accepted concept explanations and one short insight per settled card are written to the vault.
+
+Build order: the contract and card template are written by hand in one project repo. One discovery runs through the full loop. Only then do the proven parts move here as a skill and an `eww lab` command. A second project is required before the Lab counts as general.
+
+**Consequences.** Nothing enforces the contract; it is a convention until a manual step repeats and earns a command. No Lab code lands in this repo until the first discovery is settled. Friction with the contract is logged in the contract file, and those lines decide what moves here. Analysis skills, the `eww lab` command, and publishing results are not designed yet.

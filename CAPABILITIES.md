@@ -28,10 +28,11 @@ Tested with `make test` (146 checks in a temporary home folder, with herdr repla
 4. **`eww daily`.** Built and tested, with a dry run on the real vault. It adds three passages from `collections/` to the day-note that Obsidian's Daily notes setting names, uses no LLM, and keeps no state outside the vault. The first real write was on 2026-11-13. It is run by hand, with no schedule, by choice. Remaining: one day of use.
 5. **`eww define`.** Built and tested, with a dry run against the real agent. One headless call with no tools writes a definition note: a mechanism line, a plain definition, one Mermaid diagram, and two notes on practice. The reply is checked before it is written. `eww daily` may resurface these definitions. The first real note was written on 2026-11-13, and its diagram renders in Obsidian. Remaining: one day of use.
 6. **`eww weekly`.** Built and tested, with a dry run on 11 live sources. The program fetches the sources listed in the vault note `_meta/eww/weekly/sources.md`. Two headless calls with no tools: one picks up to five concepts and cites items by number, one explains each from the fetched articles (what it is, the problem it solves, why it is being discussed, its mechanism). The note goes to `inbox/`. The first real note was written on 2026-11-13. It is run by hand, with no schedule, by choice. Remaining: a day of use, and a second week to test what counts as new.
+7. **Lab.** Designed on 2026-11-13 (ADR 19). The contract and card template are written by hand in one project repo, with its data checked. Remaining: run one discovery through the full loop, then read the friction log.
 
 ## Next
 
-7. **Lab design session.**
+8. **Lab skill and `eww lab` command.** Starts after the first discovery is settled. See ADR 19.
 
 ## To verify before relying on it
 
