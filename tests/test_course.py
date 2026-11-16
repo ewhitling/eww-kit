@@ -100,7 +100,7 @@ def test_lesson_sections_returns_headings_in_order() -> None:
 
 def test_checked_body_accepts_a_good_reply_and_removes_em_dashes() -> None:
     assert course.checked_body(GOOD) == GOOD.strip()
-    assert "—" not in course.checked_body(GOOD.replace("plain sentence", "plain — sentence"))
+    assert "\u2014" not in course.checked_body(GOOD.replace("plain sentence", "plain \u2014 sentence"))
 
 
 @pytest.mark.parametrize(

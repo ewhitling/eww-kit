@@ -50,6 +50,7 @@ def interactive(monkeypatch, answer: str | None) -> None:
     monkeypatch.setattr(chat.sys.stdin, "isatty", lambda: True, raising=False)
     monkeypatch.setattr(chat.sys.stderr, "isatty", lambda: True, raising=False)
     monkeypatch.setattr(chat.shutil, "which", lambda name: None)
+    monkeypatch.setenv("NO_COLOR", "1")
 
     def typed(prompt: str = "") -> str:
         if answer is None:
@@ -66,7 +67,11 @@ def test_vault_path_is_the_first_listed_vault(vault: Path, tmp_path: Path) -> No
 
 def test_topics_merge_both_folders_and_ignore_case(vault: Path) -> None:
     found = chat.topics(vault)
+    # Topics with a lesson come first, then topics with only a definition.
     assert list(found) == ["Ablation", "Backpropagation", "Causal graph", "Causal inference"]
+    write(vault / "collections/lesson/Zeta.md", "# Zeta\n")
+    write(vault / "collections/definition/Aardvark.md", "# Aardvark\n")
+    assert list(chat.topics(vault)) == ["Ablation", "Backpropagation", "Zeta", "Aardvark", "Causal graph", "Causal inference"]
     assert [note.parent.name for note in found["Ablation"]] == ["definition", "lesson"]
     assert [note.parent.name for note in found["Backpropagation"]] == ["lesson"]
     assert chat.topics(vault / "missing") == {}
@@ -82,16 +87,44 @@ def test_matching_prefers_an_exact_title_then_titles_that_contain_the_words() ->
     assert chat.matching(titles, "") == []
 
 
-def test_topic_label_names_the_folders(vault: Path) -> None:
+def test_topic_label_puts_the_kind_in_a_column_before_the_title(vault: Path) -> None:
     found = chat.topics(vault)
-    assert chat.topic_label("Ablation", found["Ablation"]) == "Ablation  (definition, lesson)"
+    assert chat.topic_label("Ablation", found["Ablation"]) == "lesson      Ablation  + definition"
+    assert chat.topic_label("Backpropagation", found["Backpropagation"]) == "lesson      Backpropagation"
+    assert chat.topic_label("Causal graph", found["Causal graph"]) == "definition  Causal graph"
+
+
+def test_topic_label_colors_the_kind_only_when_asked(vault: Path) -> None:
+    found = chat.topics(vault)
+    assert chat.topic_label("Ablation", found["Ablation"], colored=True) == (
+        "\033[34mlesson\033[0m      Ablation  \033[2m+ definition\033[0m"
+    )
+    assert chat.topic_label("Causal graph", found["Causal graph"], colored=True) == "\033[2mdefinition\033[0m  Causal graph"
+
+
+def test_paint_and_use_color_respect_the_no_color_settings(monkeypatch) -> None:
+    assert chat.paint("x", "red", True) == "\033[31mx\033[0m"
+    assert chat.paint("x", "red", False) == "x"
+    monkeypatch.setattr(chat.sys.stderr, "isatty", lambda: True, raising=False)
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.delenv("EWW_NO_COLOR", raising=False)
+    monkeypatch.setenv("TERM", "xterm")
+    assert chat.use_color()
+    monkeypatch.setenv("NO_COLOR", "1")
+    assert not chat.use_color()
+    monkeypatch.delenv("NO_COLOR")
+    monkeypatch.setenv("TERM", "dumb")
+    assert not chat.use_color()
+    monkeypatch.setenv("TERM", "xterm")
+    monkeypatch.setattr(chat.sys.stderr, "isatty", lambda: False, raising=False)
+    assert not chat.use_color()
 
 
 def test_choose_reads_a_number_and_treats_anything_else_as_cancel(monkeypatch, capsys) -> None:
-    labels = {"Ablation": "Ablation  (lesson)", "Graph": "Graph  (definition)"}
+    labels = {"Ablation": "lesson      Ablation", "Graph": "definition  Graph"}
     interactive(monkeypatch, "2")
     assert chat.choose(labels) == "Graph"
-    assert "  2  Graph  (definition)" in capsys.readouterr().err
+    assert "  2) definition  Graph" in capsys.readouterr().err
     for answer in ("q", "0", "3", "", None):
         interactive(monkeypatch, answer)
         assert chat.choose(labels) is None
@@ -103,7 +136,10 @@ def test_session_prompt_holds_the_instruction_and_each_note(vault: Path) -> None
     assert '<note path="collections/definition/Ablation.md">' in prompt
     assert "Remove one part and measure." in prompt
     assert prompt.index("Remove one part") < prompt.index("The lesson text.")
-    assert "—" not in chat.INSTRUCTION
+    assert "\u2014" not in chat.INSTRUCTION
+    # The learner asks the questions. The agent quizzes only on request.
+    assert "Never quiz the learner." in prompt
+    assert "only when the learner asks for one" in prompt
 
 
 def test_session_prompt_cuts_a_very_long_note(vault: Path, monkeypatch) -> None:
@@ -137,7 +173,7 @@ def test_main_without_a_topic_shows_every_topic_in_the_picker(vault: Path, tmp_p
     interactive(monkeypatch, "2")
     assert chat.main([]) == 0
     listed = capsys.readouterr().err
-    assert "  1  Ablation  (definition, lesson)" in listed and "  4  Causal inference  (definition)" in listed
+    assert "  1) lesson      Ablation  + definition" in listed and "  4) definition  Causal inference" in listed
     assert "The chain rule, applied." in (tmp_path / "arguments.txt").read_text()
 
 
@@ -154,14 +190,14 @@ def test_main_shows_every_topic_when_none_matches(vault: Path, tmp_path: Path, m
     interactive(monkeypatch, "q")
     assert chat.main(["zzyzx"]) == 0
     listed = capsys.readouterr().err
-    assert 'no topic matches "zzyzx"' in listed and "  3  Causal graph  (definition)" in listed
+    assert 'no topic matches "zzyzx"' in listed and "  3) definition  Causal graph" in listed
     assert not (tmp_path / "arguments.txt").exists()
 
 
 def test_main_prints_the_list_when_the_terminal_is_not_interactive(vault: Path, tmp_path: Path, monkeypatch, capsys) -> None:
     monkeypatch.setattr(chat.sys.stdin, "isatty", lambda: False, raising=False)
     assert chat.main([]) == 0
-    assert capsys.readouterr().out.splitlines()[0] == "Ablation  (definition, lesson)"
+    assert capsys.readouterr().out.splitlines()[0] == "lesson      Ablation  + definition"
     assert chat.main(["zzyzx"]) == 1
     assert not (tmp_path / "arguments.txt").exists()
 

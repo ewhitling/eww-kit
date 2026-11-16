@@ -19,7 +19,7 @@ Decisions behind this list are in `ADR.md`. Every settings file is listed in `CO
 - **Hood plugin for Obsidian.** Kept in `obsidian/plugins/hood/`. `eww install` copies it into the vault on machines that name one.
 - **Obsidian starting settings.** `make obsidian-snapshot` copies the vault's settings into `obsidian/defaults/`. `eww install` copies them, and the Atom theme, into a vault only where a file is missing.
 
-Tested with `make test` (146 checks in a temporary home folder, with herdr replaced by a stand-in, plus the export check and 130 tests for the generator, the snapshot, `eww daily`, `eww define`, `eww course`, `eww chat`, and `eww weekly`), `make lint`, and a trial install into a temporary home using the real vault. Installed for real on one Mac on 2026-11-12; `eww doctor` passes there, and `eww h`, the numbered picker, and the map colors work in real use. Not yet tested: Ubuntu, `setup.sh` end to end, the `fzf` picker. Hood's hand-written CSS rules and cursor code have no tests here.
+Tested with `make test` (146 checks in a temporary home folder, with herdr replaced by a stand-in, plus the export check and 132 tests for the generator, the snapshot, `eww daily`, `eww define`, `eww course`, `eww chat`, and `eww weekly`), `make lint`, and a trial install into a temporary home using the real vault. Installed for real on one Mac on 2026-11-12; `eww doctor` passes there, and `eww h`, the numbered picker, and the map colors work in real use. Not yet tested: Ubuntu, `setup.sh` end to end, the `fzf` picker. Hood's hand-written CSS rules and cursor code have no tests here.
 
 ## In flight
 

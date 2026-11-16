@@ -16,8 +16,10 @@ hold a note with that title, the agent gets both.
                    When nothing matches, the picker shows every topic.
   eww chat         show a picker of every topic
 
-The picker is fzf where it is installed, and a numbered list otherwise. When
-the terminal is not interactive, the list is printed and nothing starts.
+The picker lists topics that have a lesson first, then topics that have only
+a definition, each in title order. It is fzf where it is installed, and a
+numbered list otherwise. When the terminal is not interactive, the list is
+printed and nothing starts.
 
 The agent gets the note text and a short teaching instruction. It can search
 and fetch the web to check a fact. It has no file or shell tools, so it cannot
@@ -52,14 +54,17 @@ INSTRUCTION = """You are a tutor in a conversation with one learner. The topic i
 The learner's own notes on this topic are below. Treat them as what the learner has read, not as proven fact. A note tagged #llm-generated was written by a model with no sources checked.
 
 How to teach:
-- Open by asking what the learner wants from this session: a part that is unclear, a deeper step, or a practice question. Offer those three choices in one short message, then wait.
+- The learner leads. They come with questions and follow-up questions. Open with one short line that asks what they want to ask, then wait.
+- Answer the question that was asked, first and directly. Then stop.
+- Never quiz the learner. Do not ask a question to check understanding, do not ask them to predict or apply, and do not end a reply with a practice question. Give a practice question only when the learner asks for one.
+- Ask the learner a question only when you cannot answer without it, for example when their question has two readings.
 - Explain what problem an idea solves before how it works. Start from ideas the learner can accept. Show why each next step follows.
-- Move in small steps. After an important idea, ask one short question that makes the learner predict or apply. Give direct feedback on the answer.
+- Move in small steps, and let the learner choose the next step.
 - Use one concrete example in place of several thin ones. Say when a value is invented.
 - When the learner questions a fact, or you doubt a statement in the notes, check it with web search. Say what you found and where. Search for the idea, never for the learner's words or note text.
 - When the notes are wrong, say so plainly and give the correction.
 - Use plain words and short sentences. Define a term before relying on it. Avoid idioms. Never use an em-dash.
-- Keep each reply short. The learner sets the pace.
+- Keep each reply short. Do not close with an offer or a menu of next steps.
 - You cannot write files. When the learner wants to keep something, give text they can copy.
 {notes}"""
 
@@ -70,6 +75,22 @@ NOTE_BLOCK = """
 """
 
 OPENING_MESSAGE = 'Start the session on "{title}".'
+
+# The same colors as eww h: an accent for the main kind, dim for the lesser one.
+COLORS = {"green": "32", "yellow": "33", "red": "31", "accent": "34", "dim": "2"}
+KIND_COLUMN_WIDTH = len("definition") + 2
+
+
+def use_color() -> bool:
+    """True when messages may be colored: an interactive terminal, with color not turned off."""
+    if os.environ.get("NO_COLOR") or os.environ.get("EWW_NO_COLOR") or os.environ.get("TERM") == "dumb":
+        return False
+    return sys.stderr.isatty()
+
+
+def paint(text: str, color: str, colored: bool) -> str:
+    """The text in one of the named colors, or unchanged when `colored` is False."""
+    return f"\033[{COLORS[color]}m{text}\033[0m" if colored else text
 
 
 def vault_path(home: Path) -> Path | None:
@@ -84,10 +105,12 @@ def vault_path(home: Path) -> Path | None:
 
 
 def topics(vault: Path) -> dict[str, list[Path]]:
-    """Every topic, keyed by title in title order: its notes, definition before lesson.
+    """Every topic, keyed by title: its notes, definition before lesson.
 
     A topic is a note in collections/definition or collections/lesson. Titles
     that differ only by case are one topic, shown under the first title found.
+    Topics that have a lesson come first, then topics with only a definition.
+    Each group is in title order.
     """
     by_key: dict[str, tuple[str, list[Path]]] = {}
     for folder in TOPIC_FOLDERS:
@@ -97,7 +120,11 @@ def topics(vault: Path) -> dict[str, list[Path]]:
         for path in sorted(directory.glob("*.md")):
             title, notes = by_key.setdefault(path.stem.lower(), (path.stem, []))
             notes.append(path)
-    return {title: notes for _, (title, notes) in sorted(by_key.items())}
+    def lesson_first(item: tuple[str, tuple[str, list[Path]]]) -> tuple[bool, str]:
+        key, (_, notes) = item
+        return (not any(note.parent.name == "lesson" for note in notes), key)
+
+    return {title: notes for _, (title, notes) in sorted(by_key.items(), key=lesson_first)}
 
 
 def matching(titles: list[str], words: str) -> list[str]:
@@ -114,9 +141,18 @@ def matching(titles: list[str], words: str) -> list[str]:
     return [title for title in titles if all(word in title.lower() for word in wanted.split())]
 
 
-def topic_label(title: str, notes: list[Path]) -> str:
-    """One picker line: the title, then the folders that hold it."""
-    return f"{title}  ({', '.join(note.parent.name for note in notes)})"
+def topic_label(title: str, notes: list[Path], colored: bool = False) -> str:
+    """One picker line, in the style of eww h: the kind in a fixed column, then the title.
+
+    The kind is "lesson" when the topic has a lesson. A lesson that also has a
+    definition is marked "+ definition" after the title.
+    """
+    kinds = [note.parent.name for note in notes]
+    kind = "lesson" if "lesson" in kinds else kinds[0]
+    line = paint(kind, "accent" if kind == "lesson" else "dim", colored) + " " * (KIND_COLUMN_WIDTH - len(kind)) + title
+    if kind == "lesson" and "definition" in kinds:
+        line += "  " + paint("+ definition", "dim", colored)
+    return line
 
 
 def choose(labels: dict[str, str]) -> str | None:
@@ -128,16 +164,16 @@ def choose(labels: dict[str, str]) -> str | None:
     if shutil.which("fzf"):
         lines = "\n".join(f"{index}\t{labels[title]}" for index, title in enumerate(titles))
         result = subprocess.run(
-            ["fzf", "--delimiter=\t", "--with-nth=2", "--prompt=eww chat> ", "--height=40%", "--reverse"],
+            ["fzf", "--ansi", "--delimiter=\t", "--with-nth=2", "--prompt=eww chat> ", "--height=40%", "--reverse"],
             input=lines, stdout=subprocess.PIPE, text=True,
         )
         if result.returncode != 0 or not result.stdout.strip():
             return None
         return titles[int(result.stdout.split("\t", 1)[0])]
     for index, title in enumerate(titles, start=1):
-        print(f"{index:>3}  {labels[title]}", file=sys.stderr)
+        print(f"{index:>3}) {labels[title]}", file=sys.stderr)
     try:
-        answer = input("number, or q to cancel: ").strip()
+        answer = input(f"Select [1-{len(titles)}, q to cancel]: ").strip()
     except (EOFError, KeyboardInterrupt):
         return None
     if not answer.isdigit() or not 1 <= int(answer) <= len(titles):
@@ -161,23 +197,29 @@ def agent_command() -> list[str]:
     return shlex.split(custom) if custom else DEFAULT_COMMAND
 
 
+def say(glyph: str, message: str) -> None:
+    """Print one status line to standard error, with the glyph in its usual color."""
+    color = {"→": "accent", "!": "yellow", "✗": "red", "✓": "green"}[glyph]
+    print(f"{paint(glyph, color, use_color())} {message}", file=sys.stderr)
+
+
 def main(argv: list[str]) -> int:
     if argv and argv[0] in ("-h", "--help"):
         print(__doc__.strip())
         return 0
     unknown_options = [word for word in argv if word.startswith("-")]
     if unknown_options:
-        print(f'✗ eww chat: unknown option "{unknown_options[0]}"', file=sys.stderr)
+        say("✗", f'eww chat: unknown option "{unknown_options[0]}"')
         return 2
     words = " ".join(argv)
 
     vault = vault_path(Path(os.environ.get("EWW_HOME") or Path.home()))
     if vault is None or not vault.is_dir():
-        print("✗ eww chat: no vault on this machine: ~/.config/eww/vault is missing or wrong", file=sys.stderr)
+        say("✗", "eww chat: no vault on this machine: ~/.config/eww/vault is missing or wrong")
         return 1
     found = topics(vault)
     if not found:
-        print("! eww chat: no notes in collections/lesson or collections/definition", file=sys.stderr)
+        say("!", "eww chat: no notes in collections/lesson or collections/definition")
         return 1
 
     titles = list(found)
@@ -186,13 +228,14 @@ def main(argv: list[str]) -> int:
         title = matches[0]
     else:
         if words and not matches:
-            print(f'! eww chat: no topic matches "{words}". Every topic is listed.', file=sys.stderr)
+            say("!", f'eww chat: no topic matches "{words}". Every topic is listed.')
         elif words:
-            print(f'→ {len(matches)} topics match "{words}"', file=sys.stderr)
-        offered = {name: topic_label(name, found[name]) for name in (matches or titles)}
+            say("→", f'{len(matches)} topics match "{words}"')
+        offered_titles = matches or titles
         if not (sys.stdin.isatty() and sys.stderr.isatty()):
-            print("\n".join(offered.values()))
+            print("\n".join(topic_label(name, found[name]) for name in offered_titles))
             return 1 if words else 0
+        offered = {name: topic_label(name, found[name], use_color()) for name in offered_titles}
         chosen = choose(offered)
         if chosen is None:
             return 0
@@ -201,12 +244,12 @@ def main(argv: list[str]) -> int:
     notes = found[title]
     command = agent_command()
     sources = ", ".join(note.relative_to(vault).as_posix() for note in notes)
-    print(f"→ starting {command[0]} on {title}: {sources}", file=sys.stderr)
+    say("→", f"starting {command[0]} on {title}: {sources}")
     arguments = ["--append-system-prompt", session_prompt(title, notes, vault), OPENING_MESSAGE.format(title=title)]
     try:
         return subprocess.run(command + arguments).returncode
     except FileNotFoundError:
-        print(f"✗ eww chat: {command[0]} is not installed", file=sys.stderr)
+        say("✗", f"eww chat: {command[0]} is not installed")
         return 1
     except KeyboardInterrupt:
         return 130

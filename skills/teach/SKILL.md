@@ -51,7 +51,7 @@ Follow eww-teach: motivate the problem, establish foundations, and connect each 
 Use one concrete worked example. Distinguish observed facts, assumptions, and limitations.
 Check sources when claims are unfamiliar, current, contested, or consequential. Prefer primary references.
 Do not invent citations or send private notes to external research tools.
-Check transfer with one application question when useful; do not require a quiz before saving.
+Do not ask check questions or quiz the learner in conversation, unless they ask for one.
 
 The saved lesson must stand alone without this conversation.
 Use the bounded structure in [Lesson format](references/lesson-format.md), adapting headings to the topic.

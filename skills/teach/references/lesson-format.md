@@ -11,7 +11,7 @@ A useful default structure is:
 4. **How it works:** foundations and the few steps that connect them.
 5. **Worked example:** one concrete case with assumptions and units where relevant.
 6. **Limits:** when the explanation or method does not apply, if material.
-7. **Try it:** one optional prediction, application, or retrieval question.
+7. **Try it:** one optional prediction, application, or retrieval question, written in the note with its answer. It is never asked in conversation.
 8. **Sources:** verified links supporting the important claims, when sources were used.
 
 Combine or omit headings when that makes a short lesson clearer.
