@@ -10,7 +10,7 @@ test:
 	@sh tests/run.sh
 	@sh tests/guard-paths.sh
 	@uv run --no-project tools/themes/build.py --check
-	@uv run --no-project --with pytest pytest -q -p no:cacheprovider tools/themes tools/obsidian tests/test_daily.py tests/test_define.py tests/test_course.py tests/test_weekly.py
+	@uv run --no-project --with pytest pytest -q -p no:cacheprovider tools/themes tools/obsidian tests/test_daily.py tests/test_define.py tests/test_course.py tests/test_chat.py tests/test_weekly.py
 
 themes:
 	@uv run --no-project tools/themes/build.py

@@ -19,7 +19,7 @@ Decisions behind this list are in `ADR.md`. Every settings file is listed in `CO
 - **Hood plugin for Obsidian.** Kept in `obsidian/plugins/hood/`. `eww install` copies it into the vault on machines that name one.
 - **Obsidian starting settings.** `make obsidian-snapshot` copies the vault's settings into `obsidian/defaults/`. `eww install` copies them, and the Atom theme, into a vault only where a file is missing.
 
-Tested with `make test` (146 checks in a temporary home folder, with herdr replaced by a stand-in, plus the export check and 115 tests for the generator, the snapshot, `eww daily`, `eww define`, `eww course`, and `eww weekly`), `make lint`, and a trial install into a temporary home using the real vault. Installed for real on one Mac on 2026-11-12; `eww doctor` passes there, and `eww h`, the numbered picker, and the map colors work in real use. Not yet tested: Ubuntu, `setup.sh` end to end, the `fzf` picker. Hood's hand-written CSS rules and cursor code have no tests here.
+Tested with `make test` (146 checks in a temporary home folder, with herdr replaced by a stand-in, plus the export check and 130 tests for the generator, the snapshot, `eww daily`, `eww define`, `eww course`, `eww chat`, and `eww weekly`), `make lint`, and a trial install into a temporary home using the real vault. Installed for real on one Mac on 2026-11-12; `eww doctor` passes there, and `eww h`, the numbered picker, and the map colors work in real use. Not yet tested: Ubuntu, `setup.sh` end to end, the `fzf` picker. Hood's hand-written CSS rules and cursor code have no tests here.
 
 ## In flight
 
@@ -30,10 +30,11 @@ Tested with `make test` (146 checks in a temporary home folder, with herdr repla
 6. **`eww weekly`.** Built and tested, with a dry run on 11 live sources. The program fetches the sources listed in the vault note `_meta/eww/weekly/sources.md`. Two headless calls with no tools: one picks up to five concepts and cites items by number, one explains each from the fetched articles (what it is, the problem it solves, why it is being discussed, its mechanism). The note goes to `inbox/`. The first real note was written on 2026-11-13. It is run by hand, with no schedule, by choice. Remaining: a day of use, and a second week to test what counts as new.
 7. **Lab.** Designed on 2026-11-13 (ADR 19). The contract and card template are written by hand in one project repo, with its data checked. Remaining: run one discovery through the full loop, then read the friction log.
 8. **`eww course`.** Built and tested on 2026-11-16, with a dry run against the real agent (ADR 20). One headless call with no tools writes a lesson note to `collections/lesson/`: eight headed parts, one Mermaid diagram, and a question with its answer. It extends the definition note for the term when one exists. The reply is checked for shape, not for facts, and the note says no sources were checked. Remaining: the first real note, a check that it renders in Obsidian, and one day of use.
+9. **`eww chat`.** Built and tested on 2026-11-16 (ADR 22). `eww chat TOPIC` starts an agent session on a note from `collections/lesson` or `collections/definition`, with a teaching instruction and the web search and web fetch tools only. With no topic, or no match, it shows a picker of every topic. The list and one opening turn were checked against the real vault and agent. Remaining: the first full interactive session, the `fzf` picker in real use, and one day of use.
 
 ## Next
 
-9. **Lab skill and `eww lab` command.** Starts after the first discovery is settled. See ADR 19.
+10. **Lab skill and `eww lab` command.** Starts after the first discovery is settled. See ADR 19.
 
 ## To verify before relying on it
 

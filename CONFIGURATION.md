@@ -66,6 +66,7 @@ The repo is public. Personal details, employer content, hostnames, and secrets b
 | `EWW_REPOS_DIR` | Where repos live. The default is `~/Developer`. | `eww h` |
 | `EWW_DEFINE_COMMAND` | The agent command for definitions. It reads the prompt on standard input. | `eww define` |
 | `EWW_COURSE_COMMAND` | The agent command for lessons. | `eww course` |
+| `EWW_CHAT_COMMAND` | The agent command for a tutoring session. Two arguments are added: `--append-system-prompt` with the instruction and notes, then an opening message. | `eww chat` |
 | `EWW_WEEKLY_COMMAND` | The agent command for the weekly note. | `eww weekly` |
 | `EWW_DENYLIST` | The denylist file, in place of `~/.config/eww/denylist.txt`. | The leak-check hook |
 | `EWW_NO_COLOR`, `NO_COLOR` | Turn off colored output. | Shell programs |

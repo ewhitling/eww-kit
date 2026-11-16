@@ -1,0 +1,216 @@
+#!/usr/bin/env -S uv run --quiet --script
+# eww: work | Talk through a lesson or definition note with an agent.
+# /// script
+# requires-python = ">=3.10"
+# dependencies = []
+# ///
+"""eww chat [TOPIC]
+
+Start an agent session about one topic from the primary vault. A topic is a
+note title in collections/lesson or collections/definition. When both folders
+hold a note with that title, the agent gets both.
+
+  eww chat TOPIC   open the topic with that title. Case does not matter.
+                   When no title matches exactly, titles that contain the
+                   words are used: one match opens, several show a picker.
+                   When nothing matches, the picker shows every topic.
+  eww chat         show a picker of every topic
+
+The picker is fzf where it is installed, and a numbered list otherwise. When
+the terminal is not interactive, the list is printed and nothing starts.
+
+The agent gets the note text and a short teaching instruction. It can search
+and fetch the web to check a fact. It has no file or shell tools, so it cannot
+change the vault. The chat is not saved to the vault.
+
+Settings:
+  EWW_CHAT_COMMAND   the agent command to run. Two arguments are added to it:
+                     --append-system-prompt with the instruction and notes,
+                     then an opening message. The default is claude with only
+                     the web search and web fetch tools.
+"""
+from __future__ import annotations
+
+import os
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+DEFAULT_COMMAND = [
+    "claude", "--tools", "WebSearch,WebFetch", "--allowedTools", "WebSearch,WebFetch",
+    "--strict-mcp-config", "--disable-slash-commands",
+]
+# Folders are listed in reading order: the short definition comes before the lesson.
+TOPIC_FOLDERS = ("definition", "lesson")
+LONGEST_NOTE_CHARACTERS = 60_000
+
+INSTRUCTION = """You are a tutor in a conversation with one learner. The topic is "{title}".
+
+The learner's own notes on this topic are below. Treat them as what the learner has read, not as proven fact. A note tagged #llm-generated was written by a model with no sources checked.
+
+How to teach:
+- Open by asking what the learner wants from this session: a part that is unclear, a deeper step, or a practice question. Offer those three choices in one short message, then wait.
+- Explain what problem an idea solves before how it works. Start from ideas the learner can accept. Show why each next step follows.
+- Move in small steps. After an important idea, ask one short question that makes the learner predict or apply. Give direct feedback on the answer.
+- Use one concrete example in place of several thin ones. Say when a value is invented.
+- When the learner questions a fact, or you doubt a statement in the notes, check it with web search. Say what you found and where. Search for the idea, never for the learner's words or note text.
+- When the notes are wrong, say so plainly and give the correction.
+- Use plain words and short sentences. Define a term before relying on it. Avoid idioms. Never use an em-dash.
+- Keep each reply short. The learner sets the pace.
+- You cannot write files. When the learner wants to keep something, give text they can copy.
+{notes}"""
+
+NOTE_BLOCK = """
+<note path="{path}">
+{text}
+</note>
+"""
+
+OPENING_MESSAGE = 'Start the session on "{title}".'
+
+
+def vault_path(home: Path) -> Path | None:
+    """The primary vault: the first line of ~/.config/eww/vault, or None when the file is absent."""
+    pointer = home / ".config" / "eww" / "vault"
+    if not pointer.is_file():
+        return None
+    lines = [line.strip() for line in pointer.read_text().splitlines() if line.strip()]
+    if not lines:
+        return None
+    return home / lines[0][2:] if lines[0].startswith("~/") else Path(lines[0])
+
+
+def topics(vault: Path) -> dict[str, list[Path]]:
+    """Every topic, keyed by title in title order: its notes, definition before lesson.
+
+    A topic is a note in collections/definition or collections/lesson. Titles
+    that differ only by case are one topic, shown under the first title found.
+    """
+    by_key: dict[str, tuple[str, list[Path]]] = {}
+    for folder in TOPIC_FOLDERS:
+        directory = vault / "collections" / folder
+        if not directory.is_dir():
+            continue
+        for path in sorted(directory.glob("*.md")):
+            title, notes = by_key.setdefault(path.stem.lower(), (path.stem, []))
+            notes.append(path)
+    return {title: notes for _, (title, notes) in sorted(by_key.items())}
+
+
+def matching(titles: list[str], words: str) -> list[str]:
+    """The titles that fit the words: one exact title, or every title that contains each word.
+
+    Case and extra spaces do not matter. An empty list means nothing fits.
+    """
+    wanted = " ".join(words.lower().split())
+    if not wanted:
+        return []
+    exact = [title for title in titles if " ".join(title.lower().split()) == wanted]
+    if exact:
+        return exact[:1]
+    return [title for title in titles if all(word in title.lower() for word in wanted.split())]
+
+
+def topic_label(title: str, notes: list[Path]) -> str:
+    """One picker line: the title, then the folders that hold it."""
+    return f"{title}  ({', '.join(note.parent.name for note in notes)})"
+
+
+def choose(labels: dict[str, str]) -> str | None:
+    """Ask the user to pick one title. `labels` maps each title to its picker line.
+
+    Uses fzf where it is installed, and a numbered list otherwise. None means cancelled.
+    """
+    titles = list(labels)
+    if shutil.which("fzf"):
+        lines = "\n".join(f"{index}\t{labels[title]}" for index, title in enumerate(titles))
+        result = subprocess.run(
+            ["fzf", "--delimiter=\t", "--with-nth=2", "--prompt=eww chat> ", "--height=40%", "--reverse"],
+            input=lines, stdout=subprocess.PIPE, text=True,
+        )
+        if result.returncode != 0 or not result.stdout.strip():
+            return None
+        return titles[int(result.stdout.split("\t", 1)[0])]
+    for index, title in enumerate(titles, start=1):
+        print(f"{index:>3}  {labels[title]}", file=sys.stderr)
+    try:
+        answer = input("number, or q to cancel: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        return None
+    if not answer.isdigit() or not 1 <= int(answer) <= len(titles):
+        return None
+    return titles[int(answer) - 1]
+
+
+def session_prompt(title: str, notes: list[Path], vault: Path) -> str:
+    """The teaching instruction followed by the text of each note."""
+    blocks = []
+    for note in notes:
+        text = note.read_text(errors="ignore").strip()
+        if len(text) > LONGEST_NOTE_CHARACTERS:
+            text = text[:LONGEST_NOTE_CHARACTERS] + "\n(The note is longer. The rest was left out.)"
+        blocks.append(NOTE_BLOCK.format(path=note.relative_to(vault).as_posix(), text=text))
+    return INSTRUCTION.format(title=title, notes="".join(blocks))
+
+
+def agent_command() -> list[str]:
+    custom = os.environ.get("EWW_CHAT_COMMAND")
+    return shlex.split(custom) if custom else DEFAULT_COMMAND
+
+
+def main(argv: list[str]) -> int:
+    if argv and argv[0] in ("-h", "--help"):
+        print(__doc__.strip())
+        return 0
+    unknown_options = [word for word in argv if word.startswith("-")]
+    if unknown_options:
+        print(f'✗ eww chat: unknown option "{unknown_options[0]}"', file=sys.stderr)
+        return 2
+    words = " ".join(argv)
+
+    vault = vault_path(Path(os.environ.get("EWW_HOME") or Path.home()))
+    if vault is None or not vault.is_dir():
+        print("✗ eww chat: no vault on this machine: ~/.config/eww/vault is missing or wrong", file=sys.stderr)
+        return 1
+    found = topics(vault)
+    if not found:
+        print("! eww chat: no notes in collections/lesson or collections/definition", file=sys.stderr)
+        return 1
+
+    titles = list(found)
+    matches = matching(titles, words)
+    if len(matches) == 1:
+        title = matches[0]
+    else:
+        if words and not matches:
+            print(f'! eww chat: no topic matches "{words}". Every topic is listed.', file=sys.stderr)
+        elif words:
+            print(f'→ {len(matches)} topics match "{words}"', file=sys.stderr)
+        offered = {name: topic_label(name, found[name]) for name in (matches or titles)}
+        if not (sys.stdin.isatty() and sys.stderr.isatty()):
+            print("\n".join(offered.values()))
+            return 1 if words else 0
+        chosen = choose(offered)
+        if chosen is None:
+            return 0
+        title = chosen
+
+    notes = found[title]
+    command = agent_command()
+    sources = ", ".join(note.relative_to(vault).as_posix() for note in notes)
+    print(f"→ starting {command[0]} on {title}: {sources}", file=sys.stderr)
+    arguments = ["--append-system-prompt", session_prompt(title, notes, vault), OPENING_MESSAGE.format(title=title)]
+    try:
+        return subprocess.run(command + arguments).returncode
+    except FileNotFoundError:
+        print(f"✗ eww chat: {command[0]} is not installed", file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:
+        return 130
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

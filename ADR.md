@@ -18,7 +18,7 @@ This repo is public. Records must not contain personal details, employer names, 
 ## ADR 2: The command surface is frozen
 
 - Date: 2026-11-12
-- Status: Accepted. ADR 20 records one exception to the standalone-script rule.
+- Status: Accepted. ADR 20 and ADR 22 record exceptions to the standalone-script rule.
 
 **Context.** The old tool went through seven major versions in about five weeks. Verbs were renamed and retired in each one. That erased learned habits. Shell history shows mostly bare verbs and few flags.
 
@@ -73,7 +73,7 @@ This repo is public. Records must not contain personal details, employer names, 
 ## ADR 7: Teach is three small commands that write notes
 
 - Date: 2026-11-12
-- Status: Accepted. Refined by ADR 15, ADR 16, and ADR 21. Extended by ADR 20. On 2026-11-13 the owner chose to run `eww daily` and `eww weekly` by hand, so neither has a schedule.
+- Status: Accepted. Refined by ADR 15, ADR 16, and ADR 21. Extended by ADR 20 and ADR 22. On 2026-11-13 the owner chose to run `eww daily` and `eww weekly` by hand, so neither has a schedule.
 
 **Context.** The goal is to resurface existing notes daily, learn new concepts on demand, and see rising ideas before aggregators cover them.
 
@@ -243,3 +243,14 @@ Build order: the contract and card template are written by hand in one project r
 **Decision.** The rule is reversed. `eww daily` reads only the folders named in the vault note `_meta/eww/daily/folders.md`, one `- name` line for each. Every other folder is ignored, and so is a note placed directly in `collections/`. When the note is missing, a default list in the code is used: `article`, `book`, `definition`, `highlight`, `lesson`, `quote`, `video`. `eww daily --dry-run` prints the folders it reads and the folders it ignores. The tag rules are unchanged. `CONFIGURATION.md` now lists every settings file.
 
 **Consequences.** A new folder never reaches the day-note by accident. A new folder that should be resurfaced stays silent until one line is added, and the dry run is the only place that shows it. The list of personal folders can live in the vault, outside the public repo. A folders note with no names makes `eww daily` stop with a message.
+
+## ADR 22: eww chat opens a tutoring session on a lesson or definition
+
+- Date: 2026-11-16
+- Status: Accepted. Extends ADR 7. A second exception to ADR 2.
+
+**Context.** `eww define` and `eww course` write notes, and reading a note is one-way. The owner wanted to talk through a note with an agent, started from the launcher, and to see the available notes when no topic is given.
+
+**Decision.** `eww chat [TOPIC]` starts an interactive agent session on one topic. A topic is a note title in `collections/definition` or `collections/lesson`, and the agent gets both notes when both exist. Notes written by hand are included. An exact title opens at once. Otherwise titles that contain the words are used: one match opens, and several show a picker. With no topic, or no match, the picker shows every topic. The picker is `fzf` where installed and a numbered list otherwise. The agent gets the note text and a teaching instruction in its system prompt. The instruction restates the `eww-teach` approach, because skills are turned off in the session. The agent has the web search and web fetch tools, allowed without a prompt, and no file or shell tools. The chat is not saved. The owner chose to add the verb now, as in ADR 20, and chose the name `chat` over a flag on `eww course`, which would not fit definitions.
+
+**Consequences.** The name is permanent under ADR 2 before real use. The agent cannot change the vault. The owner's questions and the topic can reach a search service, and a fetched page is untrusted text in a session that holds the note. With no file or shell tools, that text can do little. The teaching instruction is a copy of the skill's approach and can drift from it. Keeping something from a chat is a manual copy. An interactive session cannot be covered by the automated tests, which use a stand-in agent.
