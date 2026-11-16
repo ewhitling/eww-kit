@@ -12,15 +12,21 @@ Daily notes setting names, so the two always agree on where it lives. Each passa
 excerpt of your own text. No LLM is used, and no state is kept outside the
 vault.
 
-A note is left out when it:
+Only the folders of collections/ named in the vault note
+_meta/eww/daily/folders.md are read, one line of the form "- name" for each. A
+folder that is not named there is ignored, so a new folder stays out until you add it.
+When the note is missing, these folders are read: article, book, definition,
+highlight, lesson, quote, video.
+
+Inside those folders, a note is left out when it:
   is tagged #no-resurface
   is tagged #llm-generated, unless it is a definition in collections/definition
-  sits in collections/ttrpg, game, travel, film, or _important
   was shown in the last 60 days (read from past day-notes)
 
 Running it again on the same day changes nothing.
 
-  --dry-run   print the section without writing it
+  --dry-run   print the section without writing it, and list the folders
+              read and ignored
 """
 from __future__ import annotations
 
@@ -34,9 +40,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 SECTION_HEADING = "## Resurfaced"
-# Campaign, game, travel, and film notes are reference material, not ideas to
-# revisit. _important holds personal records.
-SKIPPED_KINDS = frozenset({"ttrpg", "game", "travel", "film", "_important"})
+# The folders of collections/ that are read when the vault has no folders note.
+# Every other folder is ignored: reference material and personal records must
+# be opted in, never opted out.
+DEFAULT_KINDS = frozenset({"article", "book", "definition", "highlight", "lesson", "quote", "video"})
+FOLDERS_NOTE = Path("_meta") / "eww" / "daily" / "folders.md"
 KINDS_SHOWN_WHEN_MACHINE_WRITTEN = frozenset({"definition"})
 PASSAGES_PER_DAY = 3
 RECENT_DAYS = 60
@@ -68,6 +76,36 @@ def vault_path(home: Path) -> Path | None:
     if first_line.startswith("~/"):
         return home / first_line[2:]
     return Path(first_line)
+
+
+def allowed_kinds(vault: Path) -> frozenset[str]:
+    """The folders of collections/ that may be read.
+
+    They come from the vault's folders note: every line of the form "- name".
+    A "collections/" prefix and a trailing slash are dropped. Every other line
+    is prose and is skipped. The default list is used when the note is missing.
+    """
+    note = vault / FOLDERS_NOTE
+    if not note.is_file():
+        return DEFAULT_KINDS
+    kinds: set[str] = set()
+    for line in note.read_text().splitlines():
+        item = re.match(r"\s*[-*]\s+(.+)", line)
+        if not item:
+            continue
+        name = item.group(1).strip().strip("`").removeprefix("collections/").strip("/")
+        if name:
+            kinds.add(name)
+    return frozenset(kinds)
+
+
+def ignored_kinds(vault: Path, allowed: frozenset[str]) -> list[str]:
+    """The folders of collections/ that exist and are not read, in name order."""
+    collections = vault / "collections"
+    return sorted(
+        path.name for path in collections.iterdir()
+        if path.is_dir() and not path.name.startswith(".") and path.name not in allowed
+    )
 
 
 def has_tag(text: str, tag: str) -> bool:
@@ -166,14 +204,20 @@ def display_title(stem: str) -> str:
     return title.replace("|", "-").replace("[", "(").replace("]", ")")
 
 
-def candidates(vault: Path) -> dict[str, tuple[str, str, list[str]]]:
-    """Every note that may be shown, keyed by link: (title, kind, passages)."""
+def candidates(vault: Path, allowed: frozenset[str] | None = None) -> dict[str, tuple[str, str, list[str]]]:
+    """Every note that may be shown, keyed by link: (title, kind, passages).
+
+    Only notes in the allowed folders of collections/ are read. When `allowed`
+    is not given, it is read from the vault with allowed_kinds.
+    """
+    if allowed is None:
+        allowed = allowed_kinds(vault)
     found: dict[str, tuple[str, str, list[str]]] = {}
     collections = vault / "collections"
     for path in sorted(collections.rglob("*.md")):
         relative = path.relative_to(vault)
         kind = relative.parts[1] if len(relative.parts) > 2 else ""
-        if not kind or kind in SKIPPED_KINDS:
+        if kind not in allowed:
             continue
         text = path.read_text(errors="ignore")
         if is_excluded(text, kind):
@@ -305,9 +349,17 @@ def main(argv: list[str]) -> int:
         print(f"✓ today's day-note already has a {SECTION_HEADING[3:]} section")
         return 0
 
-    passages = pick(candidates(vault), recently_shown(vault, today), random.Random())
+    allowed = allowed_kinds(vault)
+    if dry_run:
+        source = FOLDERS_NOTE.as_posix() if (vault / FOLDERS_NOTE).is_file() else "the default list"
+        print(f"→ reading, from {source}: {', '.join(sorted(allowed)) or 'no folders'}", file=sys.stderr)
+        print(f"→ ignoring: {', '.join(ignored_kinds(vault, allowed)) or 'no folders'}", file=sys.stderr)
+    passages = pick(candidates(vault, allowed), recently_shown(vault, today), random.Random())
     if not passages:
-        print("! eww daily: no passage to show. Every collection note is excluded or empty.", file=sys.stderr)
+        print(
+            "! eww daily: no passage to show. Every note in the folders that are read is excluded or empty.",
+            file=sys.stderr,
+        )
         return 1
     section = render_section(passages)
     if dry_run:

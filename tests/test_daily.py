@@ -32,6 +32,9 @@ def make_vault(root: Path) -> Path:
     write(root / "collections/_important/Record.md", f"# Record\n\n{LONG}\n")
     write(root / "collections/travel/Trip.md", f"# Trip\n\n{LONG}\n")
     write(root / "collections/film/Movie.md", f"# Movie\n\n{LONG}\n")
+    write(root / "collections/politics/Speech.md", f"# Speech\n\n{LONG}\n")
+    write(root / "collections/recipes/Soup.md", f"# Soup\n\n{LONG}\n")
+    write(root / "collections/Loose.md", f"# Loose\n\n{LONG}\n")
     write(root / "collections/book/Hidden.md", f"# Hidden\n#no-resurface\n\n{LONG}\n")
     write(root / "collections/book/Machine.md", f"# Machine\n#llm-generated\n\n{LONG}\n")
     write(root / "collections/book/Empty.md", "# Empty\n\n- short\n")
@@ -95,6 +98,36 @@ def test_candidates_skip_excluded_kinds_tags_and_empty_notes(tmp_path: Path) -> 
     assert set(found) == {"collections/book/Alpha", "collections/quote/Beta", "collections/definition/Gamma", "collections/article/Delta"}
     assert found["collections/book/Alpha"][1] == "book"
     assert len(found["collections/book/Alpha"][2]) == 2
+
+
+def test_allowed_kinds_uses_the_default_list_without_a_folders_note(tmp_path: Path) -> None:
+    assert daily.allowed_kinds(make_vault(tmp_path)) == daily.DEFAULT_KINDS
+    assert "politics" not in daily.DEFAULT_KINDS and "recipes" not in daily.DEFAULT_KINDS
+
+
+def test_allowed_kinds_reads_the_folders_note(tmp_path: Path) -> None:
+    vault = make_vault(tmp_path)
+    write(vault / daily.FOLDERS_NOTE, "# Folders eww daily reads\n#llm-generated\n\nA line of prose is not a folder.\n\n- book\n- collections/recipes/\n* `quote`\n\n")
+    assert daily.allowed_kinds(vault) == {"book", "recipes", "quote"}
+    write(vault / daily.FOLDERS_NOTE, "# nothing listed\n")
+    assert daily.allowed_kinds(vault) == frozenset()
+
+
+def test_ignored_kinds_lists_every_folder_that_is_not_read(tmp_path: Path) -> None:
+    vault = make_vault(tmp_path)
+    assert daily.ignored_kinds(vault, daily.DEFAULT_KINDS) == ["_important", "film", "politics", "recipes", "travel", "ttrpg"]
+    assert daily.ignored_kinds(vault, frozenset({"book"}))[:2] == ["_important", "article"]
+
+
+def test_candidates_read_only_the_allowed_folders(tmp_path: Path) -> None:
+    vault = make_vault(tmp_path)
+    assert set(daily.candidates(vault, frozenset({"recipes"}))) == {"collections/recipes/Soup"}
+    assert daily.candidates(vault, frozenset()) == {}
+    # A folder that appears later stays out until the folders note names it.
+    write(vault / "collections/food/Bread.md", f"# Bread\n\n{LONG}\n")
+    assert not any(link.startswith("collections/food/") for link in daily.candidates(vault))
+    write(vault / daily.FOLDERS_NOTE, "- book\n- food\n")
+    assert set(daily.candidates(vault)) == {"collections/book/Alpha", "collections/food/Bread"}
 
 
 def test_pick_prefers_different_kinds_and_fresh_notes(tmp_path: Path) -> None:
@@ -164,7 +197,10 @@ def test_main_writes_once_and_dry_run_writes_nothing(tmp_path: Path, monkeypatch
     monkeypatch.setenv("EWW_HOME", str(tmp_path / "home"))
     note = daily.day_note_path(vault, datetime.date.today())
     assert daily.main(["--dry-run"]) == 0
-    assert "## Resurfaced" in capsys.readouterr().out
+    printed = capsys.readouterr()
+    assert "## Resurfaced" in printed.out
+    assert "→ reading, from the default list: article, book, definition" in printed.err
+    assert "→ ignoring: _important, film, politics, recipes, travel, ttrpg" in printed.err
     assert not note.exists()
     assert daily.main([]) == 0
     first = note.read_text()

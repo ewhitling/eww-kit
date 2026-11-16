@@ -73,7 +73,7 @@ This repo is public. Records must not contain personal details, employer names, 
 ## ADR 7: Teach is three small commands that write notes
 
 - Date: 2026-11-12
-- Status: Accepted. Refined by ADR 15 and ADR 16. Extended by ADR 20. On 2026-11-13 the owner chose to run `eww daily` and `eww weekly` by hand, so neither has a schedule.
+- Status: Accepted. Refined by ADR 15, ADR 16, and ADR 21. Extended by ADR 20. On 2026-11-13 the owner chose to run `eww daily` and `eww weekly` by hand, so neither has a schedule.
 
 **Context.** The goal is to resurface existing notes daily, learn new concepts on demand, and see rising ideas before aggregators cover them.
 
@@ -232,3 +232,14 @@ Build order: the contract and card template are written by hand in one project r
 **Decision.** `eww course TERM` writes `collections/lesson/TERM.md` from one headless agent call with no tools. The note has eight headed parts in the order of the Teach lesson format: why it matters, what you need first, the mechanism with one Mermaid diagram, how it works, a worked example, variations, limits and common mistakes, and a question with a labelled answer. When a definition note exists for the term, its text goes into the prompt, so the lesson extends the definition and agrees with it. The reply is checked for shape before it is written, and an existing note is never replaced. The note is a separate command and a separate folder from `eww define`, so `eww daily` keeps resurfacing only definitions among machine-written notes. The owner chose to add the verb now, without the standalone period ADR 2 requires. The name `course` was chosen over `extend`, which suggests editing the definition note. Shared helper functions are copied from `eww-define`, per ADR 1.
 
 **Consequences.** The name is permanent under ADR 2 before it has had real use. The agent has no tools and checks no sources, and eight parts give more room for a wrong fact than one paragraph. The shape checks cannot catch a wrong fact. Each note says that no sources were checked. A lesson that needs verified sources still goes through the `teach` skill. Two programs now hold copies of the same helpers and can drift.
+
+## ADR 21: eww daily reads only the folders it is told to read
+
+- Date: 2026-11-16
+- Status: Accepted. Refines ADR 7.
+
+**Context.** `eww daily` held a fixed list of folders to skip and read every other folder of `collections/`. New folders appeared in the vault that hold reference material, not ideas to revisit. They were resurfaced until someone noticed. Each new folder of that kind needed a code change in a public repo.
+
+**Decision.** The rule is reversed. `eww daily` reads only the folders named in the vault note `_meta/eww/daily/folders.md`, one `- name` line for each. Every other folder is ignored, and so is a note placed directly in `collections/`. When the note is missing, a default list in the code is used: `article`, `book`, `definition`, `highlight`, `lesson`, `quote`, `video`. `eww daily --dry-run` prints the folders it reads and the folders it ignores. The tag rules are unchanged. `CONFIGURATION.md` now lists every settings file.
+
+**Consequences.** A new folder never reaches the day-note by accident. A new folder that should be resurfaced stays silent until one line is added, and the dry run is the only place that shows it. The list of personal folders can live in the vault, outside the public repo. A folders note with no names makes `eww daily` stop with a message.
