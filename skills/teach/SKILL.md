@@ -10,6 +10,7 @@ argument-hint: "Topic or discussion to turn into a saved lesson"
 Explicit invocation requests teaching plus a saved lesson, subject to destination and notes-scope confirmation.
 Use [eww-teach](../eww-teach/SKILL.md) for the teaching approach. This skill owns destination selection and the saved artifact.
 If the user says chat-only or no save, teach conversationally without accessing a note store or creating files.
+For a quick first lesson on one term with no conversation and no source checks, the user can run `eww course TERM` instead. It writes a fixed eight-part note to `collections/lesson/` from model memory. Use this skill when the lesson needs a chosen scope, verified sources, or an edit to an existing lesson.
 
 ## 1. Confirm the lesson and destination
 

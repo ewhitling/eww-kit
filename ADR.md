@@ -18,7 +18,7 @@ This repo is public. Records must not contain personal details, employer names, 
 ## ADR 2: The command surface is frozen
 
 - Date: 2026-11-12
-- Status: Accepted
+- Status: Accepted. ADR 20 records one exception to the standalone-script rule.
 
 **Context.** The old tool went through seven major versions in about five weeks. Verbs were renamed and retired in each one. That erased learned habits. Shell history shows mostly bare verbs and few flags.
 
@@ -73,7 +73,7 @@ This repo is public. Records must not contain personal details, employer names, 
 ## ADR 7: Teach is three small commands that write notes
 
 - Date: 2026-11-12
-- Status: Accepted. Refined by ADR 15 and ADR 16. On 2026-11-13 the owner chose to run `eww daily` and `eww weekly` by hand, so neither has a schedule.
+- Status: Accepted. Refined by ADR 15 and ADR 16. Extended by ADR 20. On 2026-11-13 the owner chose to run `eww daily` and `eww weekly` by hand, so neither has a schedule.
 
 **Context.** The goal is to resurface existing notes daily, learn new concepts on demand, and see rising ideas before aggregators cover them.
 
@@ -221,3 +221,14 @@ The record is one plain Markdown card per idea, in the project repo. States: inc
 Build order: the contract and card template are written by hand in one project repo. One discovery runs through the full loop. Only then do the proven parts move here as a skill and an `eww lab` command. A second project is required before the Lab counts as general.
 
 **Consequences.** Nothing enforces the contract; it is a convention until a manual step repeats and earns a command. No Lab code lands in this repo until the first discovery is settled. Friction with the contract is logged in the contract file, and those lines decide what moves here. Analysis skills, the `eww lab` command, and publishing results are not designed yet.
+
+## ADR 20: eww course writes a longer lesson, and is a verb from its first day
+
+- Date: 2026-11-16
+- Status: Accepted. Extends ADR 7. One exception to ADR 2.
+
+**Context.** `eww define` is short by design: one paragraph and one diagram. The owner wanted a next step from that note, a first lesson of about eight paragraphs, without opening an agent session. The `teach` skill writes lessons, but it is interactive and has no fixed length. ADR 2 says a new verb is added only after real use as a standalone script. Any program named `bin/eww-<verb>` is a verb at once.
+
+**Decision.** `eww course TERM` writes `collections/lesson/TERM.md` from one headless agent call with no tools. The note has eight headed parts in the order of the Teach lesson format: why it matters, what you need first, the mechanism with one Mermaid diagram, how it works, a worked example, variations, limits and common mistakes, and a question with a labelled answer. When a definition note exists for the term, its text goes into the prompt, so the lesson extends the definition and agrees with it. The reply is checked for shape before it is written, and an existing note is never replaced. The note is a separate command and a separate folder from `eww define`, so `eww daily` keeps resurfacing only definitions among machine-written notes. The owner chose to add the verb now, without the standalone period ADR 2 requires. The name `course` was chosen over `extend`, which suggests editing the definition note. Shared helper functions are copied from `eww-define`, per ADR 1.
+
+**Consequences.** The name is permanent under ADR 2 before it has had real use. The agent has no tools and checks no sources, and eight parts give more room for a wrong fact than one paragraph. The shape checks cannot catch a wrong fact. Each note says that no sources were checked. A lesson that needs verified sources still goes through the `teach` skill. Two programs now hold copies of the same helpers and can drift.
